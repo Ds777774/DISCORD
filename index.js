@@ -122,24 +122,19 @@ client.on('messageCreate', async (message) => {
         const collected = await quizMessage.awaitReactions({ filter, max: 1, time: 15000 });
         const reaction = collected.first();
 
+        const userAnswer = currentWord.options[['🇦', '🇧', '🇨', '🇩'].indexOf(reaction?.emoji.name)];
         const isCorrect = reaction?.emoji.name === currentWord.correct;
 
         if (isCorrect) {
           score++;
-          // Show the correct answer with the word, not the emoji
-          incorrectResults.push({
-            word: currentWord.word,
-            userAnswer: currentWord.options[reaction.emoji.name.charCodeAt(0) - 127462], // Get the word from the option
-            correct: currentWord.meaning
-          });
-        } else {
-          // Show user answer and the correct word
-          incorrectResults.push({
-            word: currentWord.word,
-            userAnswer: currentWord.options[reaction.emoji.name.charCodeAt(0) - 127462],
-            correct: currentWord.meaning
-          });
         }
+
+        // Show the word, user's answer, and correct answer
+        incorrectResults.push({
+          word: currentWord.word,
+          userAnswer: userAnswer.split(': ')[1], // Extract the option word (e.g., "Apple")
+          correct: currentWord.meaning
+        });
       } catch (error) {
         console.error('Reaction collection failed:', error);
         // If the timeout occurs, store "No reaction" as the answer
