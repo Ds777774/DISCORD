@@ -162,12 +162,12 @@ client.on('messageCreate', async (message) => {
     });
 
     // Show incorrect answers with their correct word
-    incorrectResults.forEach((result, index) => {
-      resultsDetail += `**Incorrect Answer - Question ${index + 1}:**\n` +
+    incorrectResults.forEach((result) => {
+      resultsDetail += `**Incorrect Answer:**\n` +
       `German word: "${result.word}"\n` +
-      `Options: ${result.options.join(', ')}\n` +
       `Your answer: ${result.userAnswer}\n` +
-      `Correct answer: ${result.correct}\n\n`;
+      `Correct answer: ${result.correct}\n` +
+      `Options: ${result.options.join(', ')}\n\n`;
     });
 
     resultEmbed.addFields({ name: 'Detailed Results', value: resultsDetail });
