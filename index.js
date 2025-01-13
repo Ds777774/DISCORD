@@ -123,6 +123,7 @@ client.on('messageCreate', async (message) => {
         const reaction = collected.first();
 
         const isCorrect = reaction?.emoji.name === currentWord.correct;
+
         if (isCorrect) {
           score++;
           // Show the correct answer with options
