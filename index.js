@@ -126,20 +126,18 @@ client.on('messageCreate', async (message) => {
 
         if (isCorrect) {
           score++;
-          // Show the correct answer with options
+          // Show the correct answer with the word, not the emoji
           incorrectResults.push({
             word: currentWord.word,
-            options: currentWord.options,
-            userAnswer: 'Correct!',
-            correct: currentWord.correct
+            userAnswer: currentWord.options[reaction.emoji.name.charCodeAt(0) - 127462], // Get the word from the option
+            correct: currentWord.meaning
           });
         } else {
-          // Show user answer and the correct answer with options
+          // Show user answer and the correct word
           incorrectResults.push({
             word: currentWord.word,
-            options: currentWord.options,
-            userAnswer: reaction ? reaction.emoji.name : 'No reaction',
-            correct: currentWord.correct
+            userAnswer: currentWord.options[reaction.emoji.name.charCodeAt(0) - 127462],
+            correct: currentWord.meaning
           });
         }
       } catch (error) {
@@ -147,9 +145,8 @@ client.on('messageCreate', async (message) => {
         // If the timeout occurs, store "No reaction" as the answer
         incorrectResults.push({
           word: currentWord.word,
-          options: currentWord.options,
           userAnswer: 'No reaction',
-          correct: currentWord.correct
+          correct: currentWord.meaning
         });
       }
 
@@ -170,8 +167,7 @@ client.on('messageCreate', async (message) => {
     incorrectResults.forEach((result) => {
       resultsDetail += `**German word:** "${result.word}"\n` +
         `Your answer: ${result.userAnswer}\n` +
-        `Correct answer: ${result.correct}\n` +
-        `Options: ${result.options.join(', ')}\n\n`;
+        `Correct answer: ${result.correct}\n\n`;
     });
 
     resultEmbed.addFields({ name: 'Detailed Results', value: resultsDetail });
