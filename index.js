@@ -125,8 +125,15 @@ client.on('messageCreate', async (message) => {
         const isCorrect = reaction?.emoji.name === currentWord.correct;
         if (isCorrect) {
           score++;
+          // Show the correct answer with options
+          incorrectResults.push({
+            word: currentWord.word,
+            options: currentWord.options,
+            userAnswer: 'Correct!',
+            correct: currentWord.correct
+          });
         } else {
-          // Store the incorrect answer with the correct word
+          // Show user answer and the correct answer with options
           incorrectResults.push({
             word: currentWord.word,
             options: currentWord.options,
@@ -150,7 +157,7 @@ client.on('messageCreate', async (message) => {
 
     quizInProgress = false;
 
-    // Send results with only incorrect answers and correct answers
+    // Send results with both correct and incorrect answers
     const resultEmbed = new EmbedBuilder()
       .setTitle('Quiz Results')
       .setDescription(`You scored ${score} out of 5!`)
@@ -158,13 +165,12 @@ client.on('messageCreate', async (message) => {
 
     let resultsDetail = '';
 
-    // Show incorrect answers with their correct word
+    // Show answers with details
     incorrectResults.forEach((result) => {
-      resultsDetail += `**Incorrect Answer:**\n` +
-      `German word: "${result.word}"\n` +
-      `Your answer: ${result.userAnswer}\n` +
-      `Correct answer: ${result.correct}\n` +
-      `Options: ${result.options.join(', ')}\n\n`;
+      resultsDetail += `**German word:** "${result.word}"\n` +
+        `Your answer: ${result.userAnswer}\n` +
+        `Correct answer: ${result.correct}\n` +
+        `Options: ${result.options.join(', ')}\n\n`;
     });
 
     resultEmbed.addFields({ name: 'Detailed Results', value: resultsDetail });
