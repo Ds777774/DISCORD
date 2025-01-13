@@ -136,6 +136,13 @@ client.on('messageCreate', async (message) => {
         }
       } catch (error) {
         console.error('Reaction collection failed:', error);
+        // If the timeout occurs, store "No reaction" as the answer
+        incorrectResults.push({
+          word: currentWord.word,
+          options: currentWord.options,
+          userAnswer: 'No reaction',
+          correct: currentWord.correct
+        });
       }
 
       await quizMessage.delete();
@@ -150,16 +157,6 @@ client.on('messageCreate', async (message) => {
       .setColor('#00FF00');
 
     let resultsDetail = '';
-
-    // Show correct answers if chosen correctly
-    selectedWords.forEach((word) => {
-      const isIncorrect = incorrectResults.some(result => result.word === word.word);
-      if (!isIncorrect) {
-        resultsDetail += `**Correct Answer:**\n` +
-        `German word: "${word.word}"\n` +
-        `Options: ${word.options.join(', ')}\n\n`;
-      }
-    });
 
     // Show incorrect answers with their correct word
     incorrectResults.forEach((result) => {
