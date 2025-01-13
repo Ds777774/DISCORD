@@ -125,6 +125,7 @@ client.on('messageCreate', async (message) => {
         const userAnswer = currentWord.options[['🇦', '🇧', '🇨', '🇩'].indexOf(reaction?.emoji.name)];
         const isCorrect = reaction?.emoji.name === currentWord.correct;
 
+        // Only update score if the answer is correct
         if (isCorrect) {
           score++;
         }
