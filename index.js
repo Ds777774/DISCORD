@@ -32,11 +32,46 @@ app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
 
-// List of 20 German words and their meanings
+// List of 40 German words and their meanings
 const words = [
   { word: 'Apfel', meaning: 'Apple', options: ['A: Apple', 'B: House', 'C: Dog', 'D: Cat'], correct: '🇦' },
   { word: 'Haus', meaning: 'House', options: ['A: Apple', 'B: House', 'C: Dog', 'D: Cat'], correct: '🇧' },
-  // ... add the remaining words here ...
+  { word: 'Katze', meaning: 'Cat', options: ['A: Apple', 'B: House', 'C: Cat', 'D: Dog'], correct: '🇨' },
+  { word: 'Hund', meaning: 'Dog', options: ['A: Dog', 'B: Cat', 'C: Apple', 'D: House'], correct: '🇦' },
+  { word: 'Buch', meaning: 'Book', options: ['A: Book', 'B: Table', 'C: Chair', 'D: Pen'], correct: '🇦' },
+  { word: 'Tisch', meaning: 'Table', options: ['A: Book', 'B: Table', 'C: Chair', 'D: Bed'], correct: '🇧' },
+  { word: 'Stuhl', meaning: 'Chair', options: ['A: Table', 'B: Bed', 'C: Chair', 'D: Window'], correct: '🇨' },
+  { word: 'Fenster', meaning: 'Window', options: ['A: Door', 'B: Table', 'C: Chair', 'D: Window'], correct: '🇩' },
+  { word: 'Tür', meaning: 'Door', options: ['A: Door', 'B: Table', 'C: Chair', 'D: Window'], correct: '🇦' },
+  { word: 'Schule', meaning: 'School', options: ['A: School', 'B: Office', 'C: University', 'D: Library'], correct: '🇦' },
+  { word: 'Auto', meaning: 'Car', options: ['A: Bicycle', 'B: Car', 'C: Train', 'D: Bus'], correct: '🇧' },
+  { word: 'Zug', meaning: 'Train', options: ['A: Train', 'B: Bus', 'C: Car', 'D: Bicycle'], correct: '🇦' },
+  { word: 'Fahrrad', meaning: 'Bicycle', options: ['A: Train', 'B: Bus', 'C: Bicycle', 'D: Car'], correct: '🇨' },
+  { word: 'Bus', meaning: 'Bus', options: ['A: Car', 'B: Train', 'C: Bicycle', 'D: Bus'], correct: '🇩' },
+  { word: 'Straße', meaning: 'Street', options: ['A: Street', 'B: Road', 'C: Path', 'D: Alley'], correct: '🇦' },
+  { word: 'Brücke', meaning: 'Bridge', options: ['A: Tunnel', 'B: Bridge', 'C: Highway', 'D: Path'], correct: '🇧' },
+  { word: 'Fluss', meaning: 'River', options: ['A: Lake', 'B: Ocean', 'C: River', 'D: Pond'], correct: '🇨' },
+  { word: 'Berg', meaning: 'Mountain', options: ['A: Valley', 'B: Mountain', 'C: Hill', 'D: Peak'], correct: '🇧' },
+  { word: 'See', meaning: 'Lake', options: ['A: Lake', 'B: River', 'C: Ocean', 'D: Pond'], correct: '🇦' },
+  { word: 'Meer', meaning: 'Ocean', options: ['A: River', 'B: Ocean', 'C: Lake', 'D: Pond'], correct: '🇧' },
+  { word: 'Baum', meaning: 'Tree', options: ['A: Tree', 'B: Grass', 'C: Bush', 'D: Flower'], correct: '🇦' },
+  { word: 'Blume', meaning: 'Flower', options: ['A: Grass', 'B: Flower', 'C: Tree', 'D: Bush'], correct: '🇧' },
+  { word: 'Gras', meaning: 'Grass', options: ['A: Tree', 'B: Bush', 'C: Grass', 'D: Flower'], correct: '🇨' },
+  { word: 'Busch', meaning: 'Bush', options: ['A: Flower', 'B: Grass', 'C: Bush', 'D: Tree'], correct: '🇨' },
+  { word: 'Sonne', meaning: 'Sun', options: ['A: Moon', 'B: Star', 'C: Sun', 'D: Planet'], correct: '🇨' },
+  { word: 'Mond', meaning: 'Moon', options: ['A: Moon', 'B: Sun', 'C: Planet', 'D: Star'], correct: '🇦' },
+  { word: 'Stern', meaning: 'Star', options: ['A: Planet', 'B: Star', 'C: Moon', 'D: Sun'], correct: '🇧' },
+  { word: 'Planet', meaning: 'Planet', options: ['A: Star', 'B: Moon', 'C: Planet', 'D: Sun'], correct: '🇨' },
+  { word: 'Tasche', meaning: 'Bag', options: ['A: Bag', 'B: Box', 'C: Case', 'D: Pocket'], correct: '🇦' },
+  { word: 'Koffer', meaning: 'Suitcase', options: ['A: Bag', 'B: Suitcase', 'C: Box', 'D: Backpack'], correct: '🇧' },
+  { word: 'Rucksack', meaning: 'Backpack', options: ['A: Bag', 'B: Suitcase', 'C: Backpack', 'D: Case'], correct: '🇨' },
+  { word: 'Schrank', meaning: 'Cupboard', options: ['A: Cupboard', 'B: Wardrobe', 'C: Drawer', 'D: Shelf'], correct: '🇦' },
+  { word: 'Regal', meaning: 'Shelf', options: ['A: Shelf', 'B: Drawer', 'C: Cupboard', 'D: Table'], correct: '🇦' },
+  { word: 'Schublade', meaning: 'Drawer', options: ['A: Shelf', 'B: Drawer', 'C: Cupboard', 'D: Wardrobe'], correct: '🇧' },
+  { word: 'Küche', meaning: 'Kitchen', options: ['A: Kitchen', 'B: Bedroom', 'C: Bathroom', 'D: Living Room'], correct: '🇦' },
+  { word: 'Bad', meaning: 'Bathroom', options: ['A: Kitchen', 'B: Bathroom', 'C: Living Room', 'D: Bedroom'], correct: '🇧' },
+  { word: 'Schlafzimmer', meaning: 'Bedroom', options: ['A: Living Room', 'B: Kitchen', 'C: Bedroom', 'D: Bathroom'], correct: '🇨' },
+  { word: 'Wohnzimmer', meaning: 'Living Room', options: ['A: Kitchen', 'B: Bathroom', 'C: Living Room', 'D: Bedroom'], correct: '🇨' }
 ];
 
 // Quiz management variables
