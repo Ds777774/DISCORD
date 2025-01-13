@@ -1,13 +1,5 @@
 const { Client, GatewayIntentBits, Partials, EmbedBuilder } = require('discord.js');
-const express = require('express');
-
-// Use environment variable for the bot token
-const TOKEN = process.env.DISCORD_TOKEN;
-
-if (!TOKEN) {
-  console.error('Error: DISCORD_TOKEN environment variable is not set.');
-  process.exit(1); // Exit the app if the token is missing
-}
+const express = require('express'); 
 
 // Create a new client instance with correct intents
 const client = new Client({
@@ -20,17 +12,20 @@ const client = new Client({
   partials: [Partials.Message, Partials.Channel, Partials.Reaction]
 });
 
-// Express server setup to keep the bot alive
+// Replace 'YOUR_BOT_TOKEN_HERE' with your actual bot token
+const TOKEN = 'YOUR BOT TOKEN'; 
+
+// Express server setup
 const app = express();
 app.get('/', (req, res) => {
-  res.send('Bot is running!');
-});
+  res.send('Bot is running');
+}); 
 
 // Start Express server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
-});
+}); 
 
 // List of 40 German words and their meanings
 const words = [
@@ -113,79 +108,99 @@ const words = [
 { word: 'Hirn', meaning: 'Brain', options: ['A: Heart', 'B: Stomach', 'C: Brain', 'D: Lungs'], correct: '🇩' }
 ];
 
-// Quiz management variables
 let quizInProgress = false;
 let currentQuestion = 0;
 let score = 0;
 let quizChannel;
+let currentAnswers = [];
+let userAnswers = {}; 
 
 // Function to send a quiz message
-const sendQuizMessage = async (channel, question, options) => {
+const sendQuizMessage = async (channel, question, options, correctAnswer) => {
   const embed = new EmbedBuilder()
-    .setTitle('**German Vocabulary Quiz**')
+    .setTitle('**GERMAN VOCABULARY QUIZ**') 
     .setDescription(question)
     .addFields(options.map((opt, index) => ({ name: opt, value: '\u200B', inline: true })))
     .setColor('#0099ff')
-    .setFooter({ text: 'React with the emoji corresponding to your answer' });
+    .setFooter({ text: 'React with the letter of your answer' }); 
 
-  const quizMessage = await channel.send({ embeds: [embed] });
+  const quizMessage = await channel.send({ embeds: [embed] }); 
 
+  // React with options
   for (const option of ['🇦', '🇧', '🇨', '🇩']) {
     await quizMessage.react(option);
-  }
+  } 
 
   return quizMessage;
-};
+}; 
 
 // Event listener when the bot is ready
 client.once('ready', () => {
   console.log(`Logged in as ${client.user.tag}`);
-});
+}); 
 
 // Event listener for messages
 client.on('messageCreate', async (message) => {
   if (message.content.toLowerCase() === '!quiz') {
     if (quizInProgress) {
       return message.reply('A quiz is already in progress. Please wait until it finishes.');
-    }
+    } 
 
     quizInProgress = true;
     quizChannel = message.channel;
     currentQuestion = 0;
     score = 0;
+    currentAnswers = [];
+    userAnswers = {}; 
 
+    // Ask 5 questions
     while (currentQuestion < 5) {
       const randomWord = words[Math.floor(Math.random() * words.length)];
       const question = `What is the English meaning of the German word "${randomWord.word}"?`;
+      const quizMessage = await sendQuizMessage(quizChannel, question, randomWord.options, randomWord.correct);
+      
+      // Create a filter for reactions
+      const filter = (reaction, user) => ['🇦', '🇧', '🇨', '🇩'].includes(reaction.emoji.name) && !user.bot; 
 
-      const quizMessage = await sendQuizMessage(quizChannel, question, randomWord.options);
+      // Wait for the user to react
+      const collected = await quizMessage.awaitReactions({ filter, max: 1, time: 15000 });
+      const reaction = collected.first(); 
 
-      const filter = (reaction, user) =>
-        ['🇦', '🇧', '🇨', '🇩'].includes(reaction.emoji.name) && !user.bot;
+      // Debugging logs
+      console.log(`Question ${currentQuestion + 1}: Expected ${randomWord.correct}, Got ${reaction ? reaction.emoji.name : 'No Reaction'}`); 
 
-      const collected = await quizMessage
-        .awaitReactions({ filter, max: 1, time: 15000 })
-        .catch(() => null);
+      // Store answer
+      if (reaction) {
+        userAnswers[currentQuestion] = {
+          word: randomWord.word,
+          userAnswer: reaction.emoji.name,
+          correctAnswer: randomWord.correct
+        };
 
-      const reaction = collected?.first();
-      if (reaction?.emoji.name === randomWord.correct) {
-        score++;
+        if (reaction.emoji.name === randomWord.correct) {
+          score++;
+        }
       }
 
       currentQuestion++;
       await quizMessage.delete();
-    }
+    } 
 
     quizInProgress = false;
 
-    const resultEmbed = new EmbedBuilder()
-      .setTitle('Quiz Results')
-      .setDescription(`You scored ${score} out of 5!`)
-      .setColor('#00FF00');
+    // Prepare the result message showing which answers were correct and which were incorrect
+    let resultMessage = `You scored ${score} out of 5!\n\n`;
+    for (let i = 0; i < 5; i++) {
+      const answer = userAnswers[i];
+      const isCorrect = answer.userAnswer === answer.correctAnswer;
+      resultMessage += `${i + 1}. Word: ${answer.word}\nYour Answer: ${answer.userAnswer} ${
+        isCorrect ? '(Correct)' : `(Incorrect, Correct answer: ${answer.correctAnswer})`
+      }\n\n`;
+    }
 
-    await quizChannel.send({ embeds: [resultEmbed] });
+    await quizChannel.send(resultMessage);
   }
-});
+}); 
 
 // Log in to Discord with the app's token
 client.login(TOKEN);
