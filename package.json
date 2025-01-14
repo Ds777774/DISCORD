@@ -1,13 +1,12 @@
 {
   "name": "nodejs",
   "version": "1.0.0",
-  "description": "A Discord bot with quiz and word-of-the-day features",
+  "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": ["discord", "bot", "quiz", "word-of-the-day"],
+  "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
@@ -16,6 +15,6 @@
     "discord-api-types": "^0.37.115",
     "discord.js": "^14.17.3",
     "express": "^4.21.2",
-    "node-schedule": "^2.1.0"
+    "node-cron": "^2.0.3"
   }
 }
