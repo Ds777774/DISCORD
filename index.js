@@ -179,14 +179,14 @@ const sendWordOfTheDay = async () => {
     .addFields(
       { name: 'Meaning', value: randomWord.meaning }
     )
-    .setColor('#FFA500') // Updated to orange
+    .setColor('#FFA500') // Orange color
     .setFooter({ text: 'Stay tuned for more words!' });
 
   await channel.send({ embeds: [embed] });
 };
 
-// Set up cron job to send Word of the Day at 14:00 IST daily
-cron.schedule('0 14 * * *', () => {
+// Set up cron job to send Word of the Day at 12:00 IST daily
+cron.schedule('30 6 * * *', () => {
   sendWordOfTheDay();
 }, {
   scheduled: true,
