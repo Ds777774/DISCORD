@@ -169,7 +169,7 @@ client.on('messageCreate', async (message) => {
 });
 
 // Word of the Day (scheduled task)
-cron.schedule('40 12 * * *', async () => {
+cron.schedule('45 12 * * *', async () => {
   const randomWord = words[Math.floor(Math.random() * words.length)];
 
   const wordEmbed = new EmbedBuilder()
