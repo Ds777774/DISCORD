@@ -1,6 +1,6 @@
 const { Client, GatewayIntentBits, Partials, EmbedBuilder } = require('discord.js');
 const express = require('express');
-const cron = require('node-cron');  // Importing node-cron
+const cron = require('node-cron');
 
 // Use environment variable for the bot token
 const TOKEN = process.env.DISCORD_TOKEN;
@@ -47,33 +47,42 @@ const words = [
   { word: 'Lampe', meaning: 'Lamp', options: ['A: Table', 'B: Lamp', 'C: Bed', 'D: Door'], correct: '🇧' }
 ];
 
-// Function to send "Word of the Day" message
-const sendWordOfTheDay = async (channel) => {
-  const randomWord = words[Math.floor(Math.random() * words.length)]; // Pick a random word
-  const embed = new EmbedBuilder()
-    .setTitle('**Word of the Day**')  // Title in bold
-    .setDescription(`**German word:** ${randomWord.word}\n**English meaning:** ${randomWord.meaning}`)
-    .setColor('#FFDD00')
-    .setFooter({ text: 'Learn a new word every day!' });
-
-  await channel.send({ embeds: [embed] });
+// Shuffle array
+const shuffleArray = (array) => {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
 };
 
-// Schedule the "Word of the Day" at 12:14 PM IST every day
-cron.schedule('14 12 * * *', async () => {
-  const channel = await client.channels.fetch('YOUR_CHANNEL_ID'); // Replace with your channel ID
-  sendWordOfTheDay(channel);
-}, {
-  scheduled: true,
-  timezone: "Asia/Kolkata"  // Ensure the time is in IST
-});
+// Quiz management variables
+let quizInProgress = false;
 
-// Event listener for messages to handle the Word of the Day command
-client.on('messageCreate', async (message) => {
-  if (message.content.toLowerCase() === '!wordoftheday') {
-    await sendWordOfTheDay(message.channel); // Send the "Word of the Day" message
+// Function to send a quiz message
+const sendQuizMessage = async (channel, question, options) => {
+  const embed = new EmbedBuilder()
+    .setTitle('**German Vocabulary Quiz**')
+    .setDescription(question)
+    .addFields(options.map((opt) => ({ name: opt, value: '\u200B', inline: true })))
+    .setColor('#0099ff')
+    .setFooter({ text: 'React with the emoji corresponding to your answer' });
+
+  const quizMessage = await channel.send({ embeds: [embed] });
+
+  for (const option of ['🇦', '🇧', '🇨', '🇩']) {
+    await quizMessage.react(option);
   }
 
+  return quizMessage;
+};
+
+// Event listener when the bot is ready
+client.once('ready', () => {
+  console.log(`Logged in as ${client.user.tag}`);
+});
+
+// Event listener for messages
+client.on('messageCreate', async (message) => {
   if (message.content.toLowerCase() === '!quiz') {
     if (quizInProgress) {
       return message.reply('A quiz is already in progress. Please wait until it finishes.');
@@ -155,6 +164,34 @@ client.on('messageCreate', async (message) => {
 
     await message.channel.send({ embeds: [resultEmbed] });
   }
+});
+
+// Channel ID for Word of the Day
+const wordOfTheDayChannelId = '1225363050207514675';
+
+// Function to send the Word of the Day
+const sendWordOfTheDay = async () => {
+  const channel = await client.channels.fetch(wordOfTheDayChannelId);
+  const randomWord = words[Math.floor(Math.random() * words.length)];
+  const embed = new EmbedBuilder()
+    .setTitle('**Word of the Day**')
+    .setDescription(`Today's German word is **${randomWord.word}**!`)
+    .addFields(
+      { name: 'Meaning', value: randomWord.meaning },
+      { name: 'Options', value: randomWord.options.join('\n') }
+    )
+    .setColor('#0099ff')
+    .setFooter({ text: 'Stay tuned for more words!' });
+
+  await channel.send({ embeds: [embed] });
+};
+
+// Set up cron job to send Word of the Day at 12:20 IST daily
+cron.schedule('20 12 * * *', () => {
+  sendWordOfTheDay();
+}, {
+  scheduled: true,
+  timezone: "Asia/Kolkata"
 });
 
 // Log in to Discord with the bot token
