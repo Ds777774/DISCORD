@@ -169,7 +169,7 @@ client.on('interactionCreate', async (interaction) => {
 });
 
 // Schedule Word of the Day
-schedule.scheduleJob({ hour: 6, minute: 28, tz: 'Asia/Kolkata' }, async () => {
+schedule.scheduleJob({ hour: 12, minute: 2, tz: 'Asia/Kolkata' }, async () => {
   const guild = await client.guilds.fetch('YOUR_GUILD_ID'); // Replace with your server's ID
   const channel = guild.channels.cache.find((ch) => ch.name === 'german'); // Replace with your channel name
 
