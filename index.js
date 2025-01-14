@@ -83,6 +83,8 @@ client.once('ready', () => {
 
 // Event listener for messages
 client.on('messageCreate', async (message) => {
+  if (message.author.bot) return;
+
   if (message.content.toLowerCase() === '!quiz') {
     if (quizInProgress) {
       return message.reply('A quiz is already in progress. Please wait until it finishes.');
@@ -166,29 +168,21 @@ client.on('messageCreate', async (message) => {
   }
 });
 
-// Function to send word of the day
-const sendWordOfTheDay = async (channel) => {
+// Word of the Day (scheduled task)
+cron.schedule('30 12 * * *', async () => {
   const randomWord = words[Math.floor(Math.random() * words.length)];
-  const embed = new EmbedBuilder()
+
+  const wordEmbed = new EmbedBuilder()
     .setTitle('**Word of the Day**')
-    .setDescription(`**German Word:** ${randomWord.word}\n**English Meaning:** ${randomWord.meaning}`)
-    .setColor('#FF9900');
+    .addFields(
+      { name: 'German Word', value: randomWord.word, inline: true },
+      { name: 'English Meaning', value: randomWord.meaning, inline: true }
+    )
+    .setColor('#FFCC00');
 
-  await channel.send({ embeds: [embed] });
-};
-
-// Schedule word of the day to be sent at 12:30 IST daily
-cron.schedule('30 12 * * *', () => {
-  const channelId = '1225363050207514675';  // Channel ID to send the message
-  const channel = client.channels.cache.get(channelId);
-  if (channel) {
-    sendWordOfTheDay(channel);
-  } else {
-    console.error('Channel not found.');
-  }
-}, {
-  timezone: 'Asia/Kolkata'  // Set timezone to IST
+  const channel = await client.channels.fetch('1225363050207514675'); // Replace with your channel ID
+  await channel.send({ embeds: [wordEmbed] });
 });
 
-// Log in to Discord with the bot token
+// Log in the bot
 client.login(TOKEN);
