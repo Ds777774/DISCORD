@@ -83,7 +83,7 @@ client.once('ready', () => {
 
 // Event listener for messages
 client.on('messageCreate', async (message) => {
-  if (message.content.toLowerCase() === '!quiz') {
+  if (message.content.toLowerCase() === '/quiz') {
     if (quizInProgress) {
       return message.reply('A quiz is already in progress. Please wait until it finishes.');
     }
@@ -185,8 +185,8 @@ const sendWordOfTheDay = async () => {
   await channel.send({ embeds: [embed] });
 };
 
-// Set up cron job to send Word of the Day at 13:30 IST daily
-cron.schedule('30 13 * * *', () => {
+// Set up cron job to send Word of the Day at 13:40 IST daily
+cron.schedule('40 13 * * *', () => {
   sendWordOfTheDay();
 }, {
   scheduled: true,
