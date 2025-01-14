@@ -33,7 +33,7 @@ app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
 
-// List of German words and their meanings
+// List of German words and their meanings for quiz
 const words = [
   { word: 'Apfel', meaning: 'Apple', options: ['A: Apple', 'B: House', 'C: Dog', 'D: Cat'], correct: '🇦' },
   { word: 'Haus', meaning: 'House', options: ['A: Apple', 'B: House', 'C: Dog', 'D: Cat'], correct: '🇧' },
@@ -54,6 +54,27 @@ const shuffleArray = (array) => {
     [array[i], array[j]] = [array[j], array[i]];
   }
 };
+
+// Function to send Word of the Day message
+const sendWordOfTheDay = async () => {
+  const channelId = '1327875414584201350'; // The channel ID where you want to send Word of the Day
+  const channel = await client.channels.fetch(channelId);
+  const randomWord = words[Math.floor(Math.random() * words.length)];
+
+  const embed = new EmbedBuilder()
+    .setTitle('**Word of the Day**')
+    .setDescription(`**German Word:** ${randomWord.word}\n**English Meaning:** ${randomWord.meaning}`)
+    .setColor('#0099ff')
+    .setFooter({ text: 'Learn a new word every day!' });
+
+  await channel.send({ embeds: [embed] });
+};
+
+// Schedule Word of the Day at 12:55 PM IST daily (adjusted for UTC)
+cron.schedule('25 7 * * *', sendWordOfTheDay, {
+  scheduled: true,
+  timezone: "Asia/Kolkata"
+});
 
 // Quiz management variables
 let quizInProgress = false;
@@ -84,8 +105,6 @@ client.once('ready', () => {
 // Event listener for messages
 client.on('messageCreate', async (message) => {
   if (message.content.toLowerCase() === '!quiz') {
-    console.log('!quiz command triggered');
-
     if (quizInProgress) {
       return message.reply('A quiz is already in progress. Please wait until it finishes.');
     }
@@ -165,27 +184,6 @@ client.on('messageCreate', async (message) => {
     resultEmbed.addFields({ name: 'Detailed Results', value: resultsDetail });
 
     await message.channel.send({ embeds: [resultEmbed] });
-  }
-});
-
-// Word of the Day setup for 12:50 IST daily
-const channelId = '1327875414584201350';  // Set your channel ID here
-const wordOfTheDayTime = '50 12 * * *'; // 12:50 PM IST daily
-
-cron.schedule(wordOfTheDayTime, async () => {
-  try {
-    const channel = await client.channels.fetch(channelId);
-    if (channel) {
-      const word = words[Math.floor(Math.random() * words.length)];
-      const embed = new EmbedBuilder()
-        .setTitle('**Word of the Day**')
-        .setDescription(`**German Word:** ${word.word}\n**English Meaning:** ${word.meaning}`)
-        .setColor('#0099ff')
-        .setFooter({ text: 'Learn German with us!' });
-      await channel.send({ embeds: [embed] });
-    }
-  } catch (error) {
-    console.error('Error fetching channel or sending Word of the Day:', error);
   }
 });
 
