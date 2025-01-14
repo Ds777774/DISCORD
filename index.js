@@ -177,8 +177,8 @@ const sendWordOfTheDay = async (channel) => {
   await channel.send({ embeds: [embed] });
 };
 
-// Schedule word of the day to be sent at 12:25 IST daily
-cron.schedule('25 12 * * *', () => {
+// Schedule word of the day to be sent at 12:30 IST daily
+cron.schedule('30 12 * * *', () => {
   const channelId = '1225363050207514675';  // Channel ID to send the message
   const channel = client.channels.cache.get(channelId);
   if (channel) {
