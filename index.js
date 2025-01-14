@@ -50,7 +50,7 @@ const words = [
 // Function to send Word of the Day message
 const sendWordOfTheDay = async () => {
   try {
-    const channelId = '1327875414584201350'; // The channel ID where you want to send Word of the Day
+    const channelId = '1225363050207514675'; // Updated channel ID
     const channel = await client.channels.fetch(channelId);
 
     const randomWord = words[Math.floor(Math.random() * words.length)];
@@ -68,8 +68,8 @@ const sendWordOfTheDay = async () => {
   }
 };
 
-// Schedule Word of the Day at 13:10 IST daily (adjusted for UTC)
-cron.schedule('40 7 * * *', sendWordOfTheDay, {
+// Schedule Word of the Day at 13:13 IST daily (adjusted for UTC)
+cron.schedule('43 7 * * *', sendWordOfTheDay, {
   scheduled: true,
   timezone: "Asia/Kolkata"
 });
