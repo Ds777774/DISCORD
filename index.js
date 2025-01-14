@@ -68,8 +68,8 @@ const sendWordOfTheDay = async () => {
   }
 };
 
-// Schedule Word of the Day at 1:00 PM IST daily (adjusted for UTC)
-cron.schedule('30 7 * * *', sendWordOfTheDay, {
+// Schedule Word of the Day at 13:04 IST daily (adjusted for UTC)
+cron.schedule('34 7 * * *', sendWordOfTheDay, {
   scheduled: true,
   timezone: "Asia/Kolkata"
 });
