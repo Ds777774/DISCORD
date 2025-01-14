@@ -35,16 +35,16 @@ app.listen(PORT, () => {
 
 // List of German words and their meanings
 const words = [
-  { word: 'Apfel', meaning: 'Apple', options: ['A: Apple', 'B: House', 'C: Dog', 'D: Cat'], correct: '🇦' },
-  { word: 'Haus', meaning: 'House', options: ['A: Apple', 'B: House', 'C: Dog', 'D: Cat'], correct: '🇧' },
-  { word: 'Hund', meaning: 'Dog', options: ['A: Apple', 'B: House', 'C: Dog', 'D: Cat'], correct: '🇨' },
-  { word: 'Katze', meaning: 'Cat', options: ['A: Apple', 'B: House', 'C: Dog', 'D: Cat'], correct: '🇩' },
-  { word: 'Tisch', meaning: 'Table', options: ['A: Table', 'B: Chair', 'C: Bed', 'D: Door'], correct: '🇦' },
-  { word: 'Stuhl', meaning: 'Chair', options: ['A: Table', 'B: Chair', 'C: Bed', 'D: Door'], correct: '🇧' },
-  { word: 'Bett', meaning: 'Bed', options: ['A: Table', 'B: Chair', 'C: Bed', 'D: Door'], correct: '🇨' },
-  { word: 'Tür', meaning: 'Door', options: ['A: Table', 'B: Chair', 'C: Bed', 'D: Door'], correct: '🇩' },
-  { word: 'Fenster', meaning: 'Window', options: ['A: Window', 'B: Chair', 'C: Bed', 'D: Door'], correct: '🇦' },
-  { word: 'Lampe', meaning: 'Lamp', options: ['A: Table', 'B: Lamp', 'C: Bed', 'D: Door'], correct: '🇧' }
+  { word: 'Apfel', meaning: 'Apple' },
+  { word: 'Haus', meaning: 'House' },
+  { word: 'Hund', meaning: 'Dog' },
+  { word: 'Katze', meaning: 'Cat' },
+  { word: 'Tisch', meaning: 'Table' },
+  { word: 'Stuhl', meaning: 'Chair' },
+  { word: 'Bett', meaning: 'Bed' },
+  { word: 'Tür', meaning: 'Door' },
+  { word: 'Fenster', meaning: 'Window' },
+  { word: 'Lampe', meaning: 'Lamp' }
 ];
 
 // Shuffle array
@@ -166,32 +166,28 @@ client.on('messageCreate', async (message) => {
   }
 });
 
-// Channel ID for Word of the Day
-const wordOfTheDayChannelId = '1225363050207514675';
-
-// Function to send the Word of the Day
-const sendWordOfTheDay = async () => {
-  const channel = await client.channels.fetch(wordOfTheDayChannelId);
+// Function to send word of the day
+const sendWordOfTheDay = async (channel) => {
   const randomWord = words[Math.floor(Math.random() * words.length)];
   const embed = new EmbedBuilder()
     .setTitle('**Word of the Day**')
-    .setDescription(`Today's German word is **${randomWord.word}**!`)
-    .addFields(
-      { name: 'Meaning', value: randomWord.meaning },
-      { name: 'Options', value: randomWord.options.join('\n') }
-    )
-    .setColor('#0099ff')
-    .setFooter({ text: 'Stay tuned for more words!' });
+    .setDescription(`**German Word:** ${randomWord.word}\n**English Meaning:** ${randomWord.meaning}`)
+    .setColor('#FF9900');
 
   await channel.send({ embeds: [embed] });
 };
 
-// Set up cron job to send Word of the Day at 12:20 IST daily
-cron.schedule('20 12 * * *', () => {
-  sendWordOfTheDay();
+// Schedule word of the day to be sent at 12:25 IST daily
+cron.schedule('25 12 * * *', () => {
+  const channelId = '1225363050207514675';  // Channel ID to send the message
+  const channel = client.channels.cache.get(channelId);
+  if (channel) {
+    sendWordOfTheDay(channel);
+  } else {
+    console.error('Channel not found.');
+  }
 }, {
-  scheduled: true,
-  timezone: "Asia/Kolkata"
+  timezone: 'Asia/Kolkata'  // Set timezone to IST
 });
 
 // Log in to Discord with the bot token
