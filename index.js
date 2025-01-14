@@ -77,15 +77,21 @@ const sendQuizMessage = async (channel, question, options) => {
 };
 
 // Event listener when the bot is ready
-client.once('ready', () => {
+client.once('ready', async () => {
   console.log(`Logged in as ${client.user.tag}`);
+
+  // Register the /quiz command
+  await client.application.commands.create({
+    name: 'quiz', // Updated command name
+    description: 'Start a German vocabulary quiz!',
+  });
 });
 
 // Event listener for messages
-client.on('messageCreate', async (message) => {
-  if (message.content.toLowerCase() === '/quiz') {
+client.on('interactionCreate', async (interaction) => {
+  if (interaction.commandName === 'quiz') {
     if (quizInProgress) {
-      return message.reply('A quiz is already in progress. Please wait until it finishes.');
+      return interaction.reply('A quiz is already in progress. Please wait until it finishes.');
     }
 
     quizInProgress = true;
@@ -99,7 +105,7 @@ client.on('messageCreate', async (message) => {
       const currentWord = selectedWords[i];
       const question = `What is the English meaning of the German word "${currentWord.word}"?`;
 
-      const quizMessage = await sendQuizMessage(message.channel, question, currentWord.options);
+      const quizMessage = await sendQuizMessage(interaction.channel, question, currentWord.options);
 
       const filter = (reaction, user) =>
         ['🇦', '🇧', '🇨', '🇩'].includes(reaction.emoji.name) && !user.bot;
@@ -162,7 +168,7 @@ client.on('messageCreate', async (message) => {
 
     resultEmbed.addFields({ name: 'Detailed Results', value: resultsDetail });
 
-    await message.channel.send({ embeds: [resultEmbed] });
+    await interaction.reply({ embeds: [resultEmbed] });
   }
 });
 
@@ -185,8 +191,8 @@ const sendWordOfTheDay = async () => {
   await channel.send({ embeds: [embed] });
 };
 
-// Set up cron job to send Word of the Day at 13:40 IST daily
-cron.schedule('40 13 * * *', () => {
+// Set up cron job to send Word of the Day at 13:30 IST daily
+cron.schedule('30 13 * * *', () => {
   sendWordOfTheDay();
 }, {
   scheduled: true,
