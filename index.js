@@ -32,7 +32,7 @@ app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
 
-// List of 20 German words and their meanings
+// List of German words and their meanings
 const words = [
   { word: 'Apfel', meaning: 'Apple', options: ['A: Apple', 'B: House', 'C: Dog', 'D: Cat'], correct: '🇦' },
   { word: 'Haus', meaning: 'House', options: ['A: Apple', 'B: House', 'C: Dog', 'D: Cat'], correct: '🇧' },
@@ -43,22 +43,10 @@ const words = [
   { word: 'Bett', meaning: 'Bed', options: ['A: Table', 'B: Chair', 'C: Bed', 'D: Door'], correct: '🇨' },
   { word: 'Tür', meaning: 'Door', options: ['A: Table', 'B: Chair', 'C: Bed', 'D: Door'], correct: '🇩' },
   { word: 'Fenster', meaning: 'Window', options: ['A: Window', 'B: Chair', 'C: Bed', 'D: Door'], correct: '🇦' },
-  { word: 'Lampe', meaning: 'Lamp', options: ['A: Table', 'B: Lamp', 'C: Bed', 'D: Door'], correct: '🇧' },
-  { word: 'Schule', meaning: 'School', options: ['A: Table', 'B: Chair', 'C: School', 'D: Door'], correct: '🇨' },
-  { word: 'Lehrer', meaning: 'Teacher', options: ['A: Teacher', 'B: Chair', 'C: Bed', 'D: Door'], correct: '🇦' },
-  { word: 'Buch', meaning: 'Book', options: ['A: Book', 'B: Lamp', 'C: Bed', 'D: Door'], correct: '🇧' },
-  { word: 'Stadt', meaning: 'City', options: ['A: City', 'B: Chair', 'C: Bed', 'D: Door'], correct: '🇨' },
-  { word: 'Land', meaning: 'Country', options: ['A: Country', 'B: Chair', 'C: Bed', 'D: Door'], correct: '🇦' },
-  { word: 'Wasser', meaning: 'Water', options: ['A: Water', 'B: Lamp', 'C: Bed', 'D: Door'], correct: '🇧' },
-  { word: 'Feuer', meaning: 'Fire', options: ['A: Table', 'B: Chair', 'C: Fire', 'D: Door'], correct: '🇨' },
-  { word: 'Himmel', meaning: 'Sky', options: ['A: Sky', 'B: Chair', 'C: Bed', 'D: Door'], correct: '🇩' },
-  { word: 'Sonne', meaning: 'Sun', options: ['A: Sun', 'B: Lamp', 'C: Bed', 'D: Door'], correct: '🇦' },
-  { word: 'Mond', meaning: 'Moon', options: ['A: Table', 'B: Chair', 'C: Moon', 'D: Door'], correct: '🇧' },
-  { word: 'Stern', meaning: 'Star', options: ['A: Star', 'B: Chair', 'C: Bed', 'D: Door'], correct: '🇨' },
-  { word: 'Baum', meaning: 'Tree', options: ['A: Tree', 'B: Lamp', 'C: Bed', 'D: Door'], correct: '🇩' }
+  { word: 'Lampe', meaning: 'Lamp', options: ['A: Table', 'B: Lamp', 'C: Bed', 'D: Door'], correct: '🇧' }
 ];
 
-// Shuffle the questions
+// Shuffle array
 const shuffleArray = (array) => {
   for (let i = array.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -68,15 +56,13 @@ const shuffleArray = (array) => {
 
 // Quiz management variables
 let quizInProgress = false;
-let score = 0;
-let incorrectResults = []; // Store incorrect answers
 
 // Function to send a quiz message
 const sendQuizMessage = async (channel, question, options) => {
   const embed = new EmbedBuilder()
     .setTitle('**German Vocabulary Quiz**')
     .setDescription(question)
-    .addFields(options.map((opt, index) => ({ name: opt, value: '\u200B', inline: true })))
+    .addFields(options.map((opt) => ({ name: opt, value: '\u200B', inline: true })))
     .setColor('#0099ff')
     .setFooter({ text: 'React with the emoji corresponding to your answer' });
 
@@ -102,12 +88,11 @@ client.on('messageCreate', async (message) => {
     }
 
     quizInProgress = true;
-    score = 0;
-    incorrectResults = []; // Reset the incorrect results
 
-    // Shuffle questions and select the first 5
-    shuffleArray(words);
-    const selectedWords = words.slice(0, 5);
+    shuffleArray(words); // Shuffle questions
+    const selectedWords = words.slice(0, 5); // Select 5 random words
+    let score = 0;
+    let detailedResults = [];
 
     for (let i = 0; i < selectedWords.length; i++) {
       const currentWord = selectedWords[i];
@@ -122,27 +107,36 @@ client.on('messageCreate', async (message) => {
         const collected = await quizMessage.awaitReactions({ filter, max: 1, time: 15000 });
         const reaction = collected.first();
 
-        const userAnswer = currentWord.options[['🇦', '🇧', '🇨', '🇩'].indexOf(reaction?.emoji.name)];
-        const isCorrect = reaction?.emoji.name === currentWord.correct;
+        if (reaction) {
+          const userChoiceIndex = ['🇦', '🇧', '🇨', '🇩'].indexOf(reaction.emoji.name);
+          const userAnswer = currentWord.options[userChoiceIndex].split(': ')[1]; // Extract answer
+          const isCorrect = userAnswer === currentWord.meaning;
 
-        // Only update score if the answer is correct
-        if (isCorrect) {
-          score++;
+          if (isCorrect) {
+            score++;
+          }
+
+          detailedResults.push({
+            word: currentWord.word,
+            userAnswer: userAnswer,
+            correct: currentWord.meaning,
+            isCorrect: isCorrect
+          });
+        } else {
+          detailedResults.push({
+            word: currentWord.word,
+            userAnswer: 'No reaction',
+            correct: currentWord.meaning,
+            isCorrect: false
+          });
         }
-
-        // Show the word, user's answer, and correct answer
-        incorrectResults.push({
-          word: currentWord.word,
-          userAnswer: userAnswer.split(': ')[1], // Extract the option word (e.g., "Apple")
-          correct: currentWord.meaning
-        });
       } catch (error) {
         console.error('Reaction collection failed:', error);
-        // If the timeout occurs, store "No reaction" as the answer
-        incorrectResults.push({
+        detailedResults.push({
           word: currentWord.word,
           userAnswer: 'No reaction',
-          correct: currentWord.meaning
+          correct: currentWord.meaning,
+          isCorrect: false
         });
       }
 
@@ -151,7 +145,6 @@ client.on('messageCreate', async (message) => {
 
     quizInProgress = false;
 
-    // Send results with both correct and incorrect answers
     const resultEmbed = new EmbedBuilder()
       .setTitle('Quiz Results')
       .setDescription(`You scored ${score} out of 5!`)
@@ -159,11 +152,11 @@ client.on('messageCreate', async (message) => {
 
     let resultsDetail = '';
 
-    // Show answers with details
-    incorrectResults.forEach((result) => {
+    detailedResults.forEach((result) => {
       resultsDetail += `**German word:** "${result.word}"\n` +
         `Your answer: ${result.userAnswer}\n` +
-        `Correct answer: ${result.correct}\n\n`;
+        `Correct answer: ${result.correct}\n` +
+        `Result: ${result.isCorrect ? '✅ Correct' : '❌ Incorrect'}\n\n`;
     });
 
     resultEmbed.addFields({ name: 'Detailed Results', value: resultsDetail });
@@ -172,5 +165,5 @@ client.on('messageCreate', async (message) => {
   }
 });
 
-// Log in to Discord with the app's token
+// Log in to Discord with the bot token
 client.login(TOKEN);
