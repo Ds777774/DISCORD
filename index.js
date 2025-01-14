@@ -1,12 +1,13 @@
-const { Client, GatewayIntentBits, Partials, EmbedBuilder } = require('discord.js');
+const { Client, GatewayIntentBits, Partials, EmbedBuilder, REST, Routes } = require('discord.js');
 const express = require('express');
 
-// Use environment variable for the bot token
+// Use environment variable for the bot token and client ID
 const TOKEN = process.env.DISCORD_TOKEN;
+const CLIENT_ID = process.env.CLIENT_ID;
 
-if (!TOKEN) {
-  console.error('Error: DISCORD_TOKEN environment variable is not set.');
-  process.exit(1); // Exit the app if the token is missing
+if (!TOKEN || !CLIENT_ID) {
+  console.error('Error: DISCORD_TOKEN or CLIENT_ID environment variable is not set.');
+  process.exit(1); // Exit the app if the token or client ID is missing
 }
 
 // Create a new client instance with correct intents
@@ -46,6 +47,26 @@ const words = [
   { word: 'Lampe', meaning: 'Lamp', options: ['A: Table', 'B: Lamp', 'C: Bed', 'D: Door'], correct: '🇧' }
 ];
 
+// Function to register the slash command
+const registerCommands = async () => {
+  const commands = [
+    {
+      name: 'quiz',
+      description: 'Start a German vocabulary quiz',
+    }
+  ];
+
+  const rest = new REST({ version: '10' }).setToken(TOKEN);
+
+  try {
+    console.log('Registering slash commands...');
+    await rest.put(Routes.applicationCommands(CLIENT_ID), { body: commands });
+    console.log('Slash commands registered successfully.');
+  } catch (error) {
+    console.error('Error registering slash commands:', error);
+  }
+};
+
 // Shuffle array
 const shuffleArray = (array) => {
   for (let i = array.length - 1; i > 0; i--) {
@@ -76,62 +97,55 @@ const sendQuizMessage = async (channel, question, options) => {
 };
 
 // Event listener when the bot is ready
-client.once('ready', () => {
+client.once('ready', async () => {
   console.log(`Logged in as ${client.user.tag}`);
+  await registerCommands(); // Register slash commands on startup
 });
 
-// Event listener for messages
-client.on('messageCreate', async (message) => {
-  if (message.content.toLowerCase() === '!quiz') {
-    if (quizInProgress) {
-      return message.reply('A quiz is already in progress. Please wait until it finishes.');
-    }
+// Event listener for interaction creation
+client.on('interactionCreate', async (interaction) => {
+  if (!interaction.isCommand() || interaction.commandName !== 'quiz') return;
 
-    quizInProgress = true;
+  if (quizInProgress) {
+    return interaction.reply({ content: 'A quiz is already in progress. Please wait until it finishes.', ephemeral: true });
+  }
 
-    shuffleArray(words); // Shuffle questions
-    const selectedWords = words.slice(0, 5); // Select 5 random words
-    let score = 0;
-    let detailedResults = [];
+  quizInProgress = true;
 
-    for (let i = 0; i < selectedWords.length; i++) {
-      const currentWord = selectedWords[i];
-      const question = `What is the English meaning of the German word "${currentWord.word}"?`;
+  shuffleArray(words); // Shuffle questions
+  const selectedWords = words.slice(0, 5); // Select 5 random words
+  let score = 0;
+  let detailedResults = [];
 
-      const quizMessage = await sendQuizMessage(message.channel, question, currentWord.options);
+  for (let i = 0; i < selectedWords.length; i++) {
+    const currentWord = selectedWords[i];
+    const question = `What is the English meaning of the German word "${currentWord.word}"?`;
 
-      const filter = (reaction, user) =>
-        ['🇦', '🇧', '🇨', '🇩'].includes(reaction.emoji.name) && !user.bot;
+    const quizMessage = await sendQuizMessage(interaction.channel, question, currentWord.options);
 
-      try {
-        const collected = await quizMessage.awaitReactions({ filter, max: 1, time: 15000 });
-        const reaction = collected.first();
+    const filter = (reaction, user) =>
+      ['🇦', '🇧', '🇨', '🇩'].includes(reaction.emoji.name) && !user.bot;
 
-        if (reaction) {
-          const userChoiceIndex = ['🇦', '🇧', '🇨', '🇩'].indexOf(reaction.emoji.name);
-          const userAnswer = currentWord.options[userChoiceIndex].split(': ')[1]; // Extract answer
-          const isCorrect = userAnswer === currentWord.meaning;
+    try {
+      const collected = await quizMessage.awaitReactions({ filter, max: 1, time: 15000 });
+      const reaction = collected.first();
 
-          if (isCorrect) {
-            score++;
-          }
+      if (reaction) {
+        const userChoiceIndex = ['🇦', '🇧', '🇨', '🇩'].indexOf(reaction.emoji.name);
+        const userAnswer = currentWord.options[userChoiceIndex].split(': ')[1]; // Extract answer
+        const isCorrect = userAnswer === currentWord.meaning;
 
-          detailedResults.push({
-            word: currentWord.word,
-            userAnswer: userAnswer,
-            correct: currentWord.meaning,
-            isCorrect: isCorrect
-          });
-        } else {
-          detailedResults.push({
-            word: currentWord.word,
-            userAnswer: 'No reaction',
-            correct: currentWord.meaning,
-            isCorrect: false
-          });
+        if (isCorrect) {
+          score++;
         }
-      } catch (error) {
-        console.error('Reaction collection failed:', error);
+
+        detailedResults.push({
+          word: currentWord.word,
+          userAnswer: userAnswer,
+          correct: currentWord.meaning,
+          isCorrect: isCorrect
+        });
+      } else {
         detailedResults.push({
           word: currentWord.word,
           userAnswer: 'No reaction',
@@ -139,30 +153,38 @@ client.on('messageCreate', async (message) => {
           isCorrect: false
         });
       }
-
-      await quizMessage.delete();
+    } catch (error) {
+      console.error('Reaction collection failed:', error);
+      detailedResults.push({
+        word: currentWord.word,
+        userAnswer: 'No reaction',
+        correct: currentWord.meaning,
+        isCorrect: false
+      });
     }
 
-    quizInProgress = false;
-
-    const resultEmbed = new EmbedBuilder()
-      .setTitle('Quiz Results')
-      .setDescription(`You scored ${score} out of 5!`)
-      .setColor('#00FF00');
-
-    let resultsDetail = '';
-
-    detailedResults.forEach((result) => {
-      resultsDetail += `**German word:** "${result.word}"\n` +
-        `Your answer: ${result.userAnswer}\n` +
-        `Correct answer: ${result.correct}\n` +
-        `Result: ${result.isCorrect ? '✅ Correct' : '❌ Incorrect'}\n\n`;
-    });
-
-    resultEmbed.addFields({ name: 'Detailed Results', value: resultsDetail });
-
-    await message.channel.send({ embeds: [resultEmbed] });
+    await quizMessage.delete();
   }
+
+  quizInProgress = false;
+
+  const resultEmbed = new EmbedBuilder()
+    .setTitle('Quiz Results')
+    .setDescription(`You scored ${score} out of 5!`)
+    .setColor('#00FF00');
+
+  let resultsDetail = '';
+
+  detailedResults.forEach((result) => {
+    resultsDetail += `**German word:** "${result.word}"\n` +
+      `Your answer: ${result.userAnswer}\n` +
+      `Correct answer: ${result.correct}\n` +
+      `Result: ${result.isCorrect ? '✅ Correct' : '❌ Incorrect'}\n\n`;
+  });
+
+  resultEmbed.addFields({ name: 'Detailed Results', value: resultsDetail });
+
+  await interaction.reply({ embeds: [resultEmbed] });
 });
 
 // Log in to Discord with the bot token
