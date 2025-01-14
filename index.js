@@ -33,49 +33,8 @@ app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
 
-// List of German words and their meanings for Word of the Day
+// List of German words and their meanings
 const words = [
-  { word: 'Apfel', meaning: 'Apple' },
-  { word: 'Haus', meaning: 'House' },
-  { word: 'Hund', meaning: 'Dog' },
-  { word: 'Katze', meaning: 'Cat' },
-  { word: 'Tisch', meaning: 'Table' },
-  { word: 'Stuhl', meaning: 'Chair' },
-  { word: 'Bett', meaning: 'Bed' },
-  { word: 'Tür', meaning: 'Door' },
-  { word: 'Fenster', meaning: 'Window' },
-  { word: 'Lampe', meaning: 'Lamp' }
-];
-
-// Function to send Word of the Day message to the specified channel
-const sendWordOfTheDay = async () => {
-  try {
-    const channelId = '1225363050207514675'; // Updated channel ID for Word of the Day
-    const channel = await client.channels.fetch(channelId);
-
-    const randomWord = words[Math.floor(Math.random() * words.length)];
-
-    const embed = new EmbedBuilder()
-      .setTitle('**Word of the Day**')
-      .setDescription(`**German Word:** ${randomWord.word}\n**English Meaning:** ${randomWord.meaning}`)
-      .setColor('#0099ff')
-      .setFooter({ text: 'Learn a new word every day!' });
-
-    await channel.send({ embeds: [embed] });
-    console.log('Word of the Day message sent successfully!');
-  } catch (error) {
-    console.error('Error sending Word of the Day:', error);
-  }
-};
-
-// Schedule Word of the Day at 13:21 IST daily (adjusted for UTC)
-cron.schedule('51 7 * * *', sendWordOfTheDay, {
-  scheduled: true,
-  timezone: "Asia/Kolkata"
-});
-
-// List of German words for the quiz
-const quizWords = [
   { word: 'Apfel', meaning: 'Apple', options: ['A: Apple', 'B: House', 'C: Dog', 'D: Cat'], correct: '🇦' },
   { word: 'Haus', meaning: 'House', options: ['A: Apple', 'B: House', 'C: Dog', 'D: Cat'], correct: '🇧' },
   { word: 'Hund', meaning: 'Dog', options: ['A: Apple', 'B: House', 'C: Dog', 'D: Cat'], correct: '🇨' },
@@ -131,8 +90,8 @@ client.on('messageCreate', async (message) => {
 
     quizInProgress = true;
 
-    shuffleArray(quizWords); // Shuffle questions
-    const selectedWords = quizWords.slice(0, 5); // Select 5 random words
+    shuffleArray(words); // Shuffle questions
+    const selectedWords = words.slice(0, 5); // Select 5 random words
     let score = 0;
     let detailedResults = [];
 
@@ -205,6 +164,33 @@ client.on('messageCreate', async (message) => {
 
     await message.channel.send({ embeds: [resultEmbed] });
   }
+});
+
+// Channel ID for Word of the Day
+const wordOfTheDayChannelId = '1225363050207514675';
+
+// Function to send the Word of the Day
+const sendWordOfTheDay = async () => {
+  const channel = await client.channels.fetch(wordOfTheDayChannelId);
+  const randomWord = words[Math.floor(Math.random() * words.length)];
+  const embed = new EmbedBuilder()
+    .setTitle('**Word of the Day**')
+    .setDescription(`Today's German word is **${randomWord.word}**!`)
+    .addFields(
+      { name: 'Meaning', value: randomWord.meaning }
+    )
+    .setColor('#0099ff')
+    .setFooter({ text: 'Stay tuned for more words!' });
+
+  await channel.send({ embeds: [embed] });
+};
+
+// Set up cron job to send Word of the Day at 13:30 IST daily
+cron.schedule('30 13 * * *', () => {
+  sendWordOfTheDay();
+}, {
+  scheduled: true,
+  timezone: "Asia/Kolkata"
 });
 
 // Log in to Discord with the bot token
