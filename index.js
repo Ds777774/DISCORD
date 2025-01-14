@@ -169,7 +169,7 @@ client.on('messageCreate', async (message) => {
 });
 
 // Word of the Day (scheduled task)
-cron.schedule('30 12 * * *', async () => {
+cron.schedule('40 12 * * *', async () => {
   const randomWord = words[Math.floor(Math.random() * words.length)];
 
   const wordEmbed = new EmbedBuilder()
@@ -180,7 +180,7 @@ cron.schedule('30 12 * * *', async () => {
     )
     .setColor('#FFCC00');
 
-  const channel = await client.channels.fetch('1225363050207514675'); // Replace with your channel ID
+  const channel = await client.channels.fetch('1327875414584201350'); // Updated channel ID
   await channel.send({ embeds: [wordEmbed] });
 });
 
