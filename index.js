@@ -33,7 +33,7 @@ app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
 
-// List of German words and their meanings
+// List of German words and their meanings for Word of the Day
 const words = [
   { word: 'Apfel', meaning: 'Apple' },
   { word: 'Haus', meaning: 'House' },
@@ -47,10 +47,10 @@ const words = [
   { word: 'Lampe', meaning: 'Lamp' }
 ];
 
-// Function to send Word of the Day message
+// Function to send Word of the Day message to the specified channel
 const sendWordOfTheDay = async () => {
   try {
-    const channelId = '1225363050207514675'; // Updated channel ID
+    const channelId = '1225363050207514675'; // Updated channel ID for Word of the Day
     const channel = await client.channels.fetch(channelId);
 
     const randomWord = words[Math.floor(Math.random() * words.length)];
@@ -68,8 +68,8 @@ const sendWordOfTheDay = async () => {
   }
 };
 
-// Schedule Word of the Day at 13:13 IST daily (adjusted for UTC)
-cron.schedule('43 7 * * *', sendWordOfTheDay, {
+// Schedule Word of the Day at 13:17 IST daily (adjusted for UTC)
+cron.schedule('47 7 * * *', sendWordOfTheDay, {
   scheduled: true,
   timezone: "Asia/Kolkata"
 });
