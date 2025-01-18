@@ -604,6 +604,7 @@ client.on('messageCreate', async (message) => {
       } 
 
       const selectedLevel = levels[levelEmojis.indexOf(reaction.emoji.name)];
+let userLevel = selectedLevel; // Store the user's level
       await levelMessage.delete(); 
 
       const questions = quizData[selectedLevel] || [];
@@ -666,23 +667,25 @@ client.on('messageCreate', async (message) => {
         }
       } 
 
-      const resultEmbed = new EmbedBuilder()
-        .setTitle('Quiz Results')
-        .setDescription(`You scored ${score} out of ${questionsToAsk.length}!`)
-        .setColor('#2ECC71')
-        .addFields(
-          {
-            name: 'Detailed Results',
-            value: detailedResults
-              .map(
-                (res) =>
-                  `**Word:** ${res.word}\nYour Answer: ${res.userAnswer}\nCorrect: ${res.correct}\nResult: ${
-                    res.isCorrect ? '✅' : '❌'
-                  }`
-              )
-              .join('\n\n'),
-          }
-        ); 
+       const resultEmbed = new EmbedBuilder()
+  .setTitle('Quiz Results')
+  .setDescription(
+    `**Level:** ${userLevel}\nYou scored ${score} out of ${questionsToAsk.length}!`
+  )
+  .setColor('#2ECC71')
+  .addFields(
+    {
+      name: 'Detailed Results',
+      value: detailedResults
+        .map(
+          (res) =>
+            `**Word:** ${res.word}\nYour Answer: ${res.userAnswer}\nCorrect: ${res.correct}\nResult: ${
+              res.isCorrect ? '✅' : '❌'
+            }`
+        )
+        .join('\n\n'),
+    }
+  );
 
       await message.channel.send({ embeds: [resultEmbed] });
     } catch (error) {
