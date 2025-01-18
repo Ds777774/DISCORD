@@ -571,7 +571,7 @@ const sendQuizMessage = async (channel, user, question, options) => {
 
 // Message event listener
 client.on('messageCreate', async (message) => {
-  if (message.content.toLowerCase() === '?quiz') {
+  if (message.content.toLowerCase() === '!quiz') {
     if (quizInProgress) {
       return message.reply('A quiz is already in progress. Please wait.');
     } 
@@ -694,7 +694,7 @@ client.on('messageCreate', async (message) => {
 }); 
 
 // Word of the Day
-const wordOfTheDayChannelId = '1327875414584201350';
+const wordOfTheDayChannelId = '1225363050207514675';
 const sendWordOfTheDay = async () => {
   const channel = await client.channels.fetch(wordOfTheDayChannelId);
   const randomWord = wordList[Math.floor(Math.random() * wordList.length)];
@@ -713,7 +713,7 @@ const sendWordOfTheDay = async () => {
 }; 
 
 cron.schedule(
-  '04 15 * * *',
+  '17 15 * * *',
   () => {
     sendWordOfTheDay();
   },
