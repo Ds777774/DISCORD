@@ -1,314 +1,730 @@
 const { Client, GatewayIntentBits, Partials, EmbedBuilder } = require('discord.js');
 const express = require('express');
-const cron = require('node-cron');
+const cron = require('node-cron'); 
 
-// Use environment variable for the bot token
-const TOKEN = process.env.DISCORD_TOKEN;
+const TOKEN = process.env.DISCORD_TOKEN; 
 
 if (!TOKEN) {
-  console.error('Error: DISCORD_TOKEN environment variable is not set.');
-  process.exit(1); // Exit the app if the token is missing
-}
+  console.error('Error: DISCORD_TOKEN environment variable is not set.');
+  process.exit(1);
+} 
 
-// Create a new client instance with correct intents
+// Create a new client instance
 const client = new Client({
-  intents: [
-    GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent,
-    GatewayIntentBits.GuildMessageReactions
-  ],
-  partials: [Partials.Message, Partials.Channel, Partials.Reaction]
-});
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent,
+    GatewayIntentBits.GuildMessageReactions,
+  ],
+  partials: [Partials.Message, Partials.Channel, Partials.Reaction],
+}); 
 
-// Express server setup to keep the bot alive
+// Express server to keep the bot alive
 const app = express();
 app.get('/', (req, res) => {
-  res.send('Bot is running!');
+  res.send('Bot is running!');
 });
-
-// Start Express server
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-});
+app.listen(PORT, () => console.log(`Server is running on port ${PORT}`)); 
 
-// List of German words and their meanings
-const words = [
-  { word: 'Apfel', meaning: 'Apple', options: ['A: Apple', 'B: House', 'C: Dog', 'D: Cat'], correct: '🇦' },
+// Quiz data by levels
+const quizData = {
+  A1: [
+    { word: 'Apfel', meaning: 'Apple', options: ['A: Apple', 'B: House', 'C: Dog', 'D: Cat'], correct: '🇦' },
   { word: 'Haus', meaning: 'House', options: ['A: Apple', 'B: House', 'C: Dog', 'D: Cat'], correct: '🇧' },
-  { word: 'Katze', meaning: 'Cat', options: ['A: Apple', 'B: House', 'C: Cat', 'D: Dog'], correct: '🇨' },
-  { word: 'Hund', meaning: 'Dog', options: ['A: Dog', 'B: Cat', 'C: Apple', 'D: House'], correct: '🇦' },
-  { word: 'Buch', meaning: 'Book', options: ['A: Book', 'B: Table', 'C: Chair', 'D: Pen'], correct: '🇦' },
-  { word: 'Tisch', meaning: 'Table', options: ['A: Book', 'B: Table', 'C: Chair', 'D: Bed'], correct: '🇧' },
-  { word: 'Stuhl', meaning: 'Chair', options: ['A: Table', 'B: Bed', 'C: Chair', 'D: Window'], correct: '🇨' },
-  { word: 'Fenster', meaning: 'Window', options: ['A: Door', 'B: Table', 'C: Chair', 'D: Window'], correct: '🇩' },
-  { word: 'Tür', meaning: 'Door', options: ['A: Door', 'B: Table', 'C: Chair', 'D: Window'], correct: '🇦' },
-  { word: 'Schule', meaning: 'School', options: ['A: School', 'B: Office', 'C: University', 'D: Library'], correct: '🇦' },
-  { word: 'Auto', meaning: 'Car', options: ['A: Bicycle', 'B: Car', 'C: Train', 'D: Bus'], correct: '🇧' },
-  { word: 'Zug', meaning: 'Train', options: ['A: Train', 'B: Bus', 'C: Car', 'D: Bicycle'], correct: '🇦' },
-  { word: 'Fahrrad', meaning: 'Bicycle', options: ['A: Train', 'B: Bus', 'C: Bicycle', 'D: Car'], correct: '🇨' },
-  { word: 'Bus', meaning: 'Bus', options: ['A: Car', 'B: Train', 'C: Bicycle', 'D: Bus'], correct: '🇩' },
-  { word: 'Straße', meaning: 'Street', options: ['A: Street', 'B: Road', 'C: Path', 'D: Alley'], correct: '🇦' },
-  { word: 'Brücke', meaning: 'Bridge', options: ['A: Tunnel', 'B: Bridge', 'C: Highway', 'D: Path'], correct: '🇧' },
-  { word: 'Fluss', meaning: 'River', options: ['A: Lake', 'B: Ocean', 'C: River', 'D: Pond'], correct: '🇨' },
-  { word: 'Berg', meaning: 'Mountain', options: ['A: Valley', 'B: Mountain', 'C: Hill', 'D: Peak'], correct: '🇧' },
-  { word: 'See', meaning: 'Lake', options: ['A: Lake', 'B: River', 'C: Ocean', 'D: Pond'], correct: '🇦' },
-  { word: 'Meer', meaning: 'Ocean', options: ['A: River', 'B: Ocean', 'C: Lake', 'D: Pond'], correct: '🇧' },
-  { word: 'Baum', meaning: 'Tree', options: ['A: Tree', 'B: Grass', 'C: Bush', 'D: Flower'], correct: '🇦' },
-  { word: 'Blume', meaning: 'Flower', options: ['A: Grass', 'B: Flower', 'C: Tree', 'D: Bush'], correct: '🇧' },
-  { word: 'Gras', meaning: 'Grass', options: ['A: Tree', 'B: Bush', 'C: Grass', 'D: Flower'], correct: '🇨' },
-  { word: 'Busch', meaning: 'Bush', options: ['A: Flower', 'B: Grass', 'C: Bush', 'D: Tree'], correct: '🇨' },
-  { word: 'Sonne', meaning: 'Sun', options: ['A: Moon', 'B: Star', 'C: Sun', 'D: Planet'], correct: '🇨' },
-  { word: 'Mond', meaning: 'Moon', options: ['A: Moon', 'B: Sun', 'C: Planet', 'D: Star'], correct: '🇦' },
-  { word: 'Stern', meaning: 'Star', options: ['A: Planet', 'B: Star', 'C: Moon', 'D: Sun'], correct: '🇧' },
-  { word: 'Planet', meaning: 'Planet', options: ['A: Star', 'B: Moon', 'C: Planet', 'D: Sun'], correct: '🇨' },
-  { word: 'Tasche', meaning: 'Bag', options: ['A: Bag', 'B: Box', 'C: Case', 'D: Pocket'], correct: '🇦' },
-  { word: 'Koffer', meaning: 'Suitcase', options: ['A: Bag', 'B: Suitcase', 'C: Box', 'D: Backpack'], correct: '🇧' },
-  { word: 'Rucksack', meaning: 'Backpack', options: ['A: Bag', 'B: Suitcase', 'C: Backpack', 'D: Case'], correct: '🇨' },
-  { word: 'Schrank', meaning: 'Cupboard', options: ['A: Cupboard', 'B: Wardrobe', 'C: Drawer', 'D: Shelf'], correct: '🇦' },
-  { word: 'Regal', meaning: 'Shelf', options: ['A: Shelf', 'B: Drawer', 'C: Cupboard', 'D: Table'], correct: '🇦' },
-  { word: 'Schublade', meaning: 'Drawer', options: ['A: Shelf', 'B: Drawer', 'C: Cupboard', 'D: Wardrobe'], correct: '🇧' },
-  { word: 'Küche', meaning: 'Kitchen', options: ['A: Kitchen', 'B: Bedroom', 'C: Bathroom', 'D: Living Room'], correct: '🇦' },
-  { word: 'Bad', meaning: 'Bathroom', options: ['A: Kitchen', 'B: Bathroom', 'C: Living Room', 'D: Bedroom'], correct: '🇧' },
-  { word: 'Schlafzimmer', meaning: 'Bedroom', options: ['A: Living Room', 'B: Kitchen', 'C: Bedroom', 'D: Bathroom'], correct: '🇨' },
-  { word: 'Wohnzimmer', meaning: 'Living Room', options: ['A: Kitchen', 'B: Bathroom', 'C: Living Room', 'D: Bedroom'], correct: '🇨' },
-  { word: 'Apfelbaum', meaning: 'Apple tree', options: ['A: Pear tree', 'B: Apple tree', 'C: Cherry tree', 'D: Pine tree'], correct: '🇧' },
-  { word: 'Eichhörnchen', meaning: 'Squirrel', options: ['A: Dog', 'B: Cat', 'C: Rabbit', 'D: Squirrel'], correct: '🇩' },
-  { word: 'Himmel', meaning: 'Sky', options: ['A: Ground', 'B: Cloud', 'C: Sky', 'D: Ocean'], correct: '🇩' },
-{ word: 'Wald', meaning: 'Forest', options: ['A: Desert', 'B: Forest', 'C: Meadow', 'D: Sea'], correct: '🇧' },
-{ word: 'Baumhaus', meaning: 'Treehouse', options: ['A: Treehouse', 'B: Hut', 'C: Tent', 'D: Cabin'], correct: '🇦' },
-{ word: 'Löffel', meaning: 'Spoon', options: ['A: Fork', 'B: Knife', 'C: Spoon', 'D: Plate'], correct: '🇩' },
-{ word: 'Gabel', meaning: 'Fork', options: ['A: Spoon', 'B: Plate', 'C: Fork', 'D: Knife'], correct: '🇩' },
-{ word: 'Messer', meaning: 'Knife', options: ['A: Knife', 'B: Spoon', 'C: Fork', 'D: Plate'], correct: '🇦' },
-{ word: 'Teller', meaning: 'Plate', options: ['A: Fork', 'B: Spoon', 'C: Knife', 'D: Plate'], correct: '🇩' },
-{ word: 'Stuhlgang', meaning: 'Bowel movement', options: ['A: Cough', 'B: Stomachache', 'C: Bowel movement', 'D: Headache'], correct: '🇩' },
-{ word: 'Hose', meaning: 'Pants', options: ['A: Shirt', 'B: Pants', 'C: Shoes', 'D: Hat'], correct: '🇧' },
-{ word: 'Jacke', meaning: 'Jacket', options: ['A: Shirt', 'B: Jacket', 'C: Pants', 'D: Sweater'], correct: '🇧' },
-{ word: 'Pullover', meaning: 'Sweater', options: ['A: Pants', 'B: Jacket', 'C: Sweater', 'D: Scarf'], correct: '🇩' },
-{ word: 'Schuhe', meaning: 'Shoes', options: ['A: Hat', 'B: Shoes', 'C: Pants', 'D: Socks'], correct: '🇧' },
-{ word: 'Socken', meaning: 'Socks', options: ['A: Pants', 'B: Hat', 'C: Shoes', 'D: Socks'], correct: '🇩' },
-{ word: 'Brille', meaning: 'Glasses', options: ['A: Hat', 'B: Glasses', 'C: Jacket', 'D: Sweater'], correct: '🇧' },
-{ word: 'Mütze', meaning: 'Cap', options: ['A: Gloves', 'B: Shoes', 'C: Cap', 'D: Jacket'], correct: '🇩' },
-{ word: 'Handschuh', meaning: 'Glove', options: ['A: Socks', 'B: Shoes', 'C: Gloves', 'D: Hat'], correct: '🇨' },
-{ word: 'Regenschirm', meaning: 'Umbrella', options: ['A: Hat', 'B: Umbrella', 'C: Jacket', 'D: Shoes'], correct: '🇧' },
-{ word: 'Kopf', meaning: 'Head', options: ['A: Arm', 'B: Leg', 'C: Head', 'D: Foot'], correct: '🇩' },
-{ word: 'Arm', meaning: 'Arm', options: ['A: Hand', 'B: Arm', 'C: Foot', 'D: Head'], correct: '🇧' },
-{ word: 'Bein', meaning: 'Leg', options: ['A: Foot', 'B: Leg', 'C: Arm', 'D: Hand'], correct: '🇧' },
-{ word: 'Fuß', meaning: 'Foot', options: ['A: Foot', 'B: Leg', 'C: Head', 'D: Arm'], correct: '🇦' },
-{ word: 'Auge', meaning: 'Eye', options: ['A: Ear', 'B: Eye', 'C: Mouth', 'D: Nose'], correct: '🇧' },
-{ word: 'Nase', meaning: 'Nose', options: ['A: Mouth', 'B: Ear', 'C: Nose', 'D: Eye'], correct: '🇩' },
-{ word: 'Mund', meaning: 'Mouth', options: ['A: Nose', 'B: Eye', 'C: Ear', 'D: Mouth'], correct: '🇩' },
-{ word: 'Zunge', meaning: 'Tongue', options: ['A: Nose', 'B: Eye', 'C: Tongue', 'D: Ear'], correct: '🇩' },
-{ word: 'Zahn', meaning: 'Tooth', options: ['A: Eye', 'B: Tooth', 'C: Nose', 'D: Ear'], correct: '🇧' },
-{ word: 'Hals', meaning: 'Neck', options: ['A: Neck', 'B: Head', 'C: Shoulder', 'D: Arm'], correct: '🇦' },
-{ word: 'Rücken', meaning: 'Back', options: ['A: Leg', 'B: Back', 'C: Foot', 'D: Arm'], correct: '🇧' },
-{ word: 'Bauch', meaning: 'Stomach', options: ['A: Head', 'B: Stomach', 'C: Leg', 'D: Foot'], correct: '🇧' },
-{ word: 'Hand', meaning: 'Hand', options: ['A: Leg', 'B: Foot', 'C: Hand', 'D: Arm'], correct: '🇩' },
-{ word: 'Fingernagel', meaning: 'Fingernail', options: ['A: Hand', 'B: Nail', 'C: Fingernail', 'D: Foot'], correct: '🇩' },
-{ word: 'Zehe', meaning: 'Toe', options: ['A: Finger', 'B: Foot', 'C: Toe', 'D: Leg'], correct: '🇩' },
-{ word: 'Herz', meaning: 'Heart', options: ['A: Brain', 'B: Heart', 'C: Stomach', 'D: Lungs'], correct: '🇧' },
-{ word: 'Lunge', meaning: 'Lung', options: ['A: Heart', 'B: Lung', 'C: Kidney', 'D: Liver'], correct: '🇧' },
-{ word: 'Leber', meaning: 'Liver', options: ['A: Kidney', 'B: Stomach', 'C: Liver', 'D: Heart'], correct: '🇩' },
-{ word: 'Nieren', meaning: 'Kidneys', options: ['A: Heart', 'B: Kidney', 'C: Lung', 'D: Stomach'], correct: '🇧' },
-{ word: 'Hirn', meaning: 'Brain', options: ['A: Heart', 'B: Stomach', 'C: Brain', 'D: Lungs'], correct: '🇩' },
- { word: 'Brot', meaning: 'Bread', options: ['A: Bread', 'B: Milk', 'C: Water', 'D: Butter'], correct: '🇦' },
-  { word: 'Milch', meaning: 'Milk', options: ['A: Butter', 'B: Cheese', 'C: Milk', 'D: Bread'], correct: '🇨' },
-  { word: 'Wasser', meaning: 'Water', options: ['A: Juice', 'B: Water', 'C: Tea', 'D: Coffee'], correct: '🇧' },
-  { word: 'Kaffee', meaning: 'Coffee', options: ['A: Tea', 'B: Water', 'C: Coffee', 'D: Milk'], correct: '🇨' },
-  { word: 'Tee', meaning: 'Tea', options: ['A: Coffee', 'B: Water', 'C: Tea', 'D: Juice'], correct: '🇨' },
-  { word: 'Saft', meaning: 'Juice', options: ['A: Tea', 'B: Juice', 'C: Milk', 'D: Coffee'], correct: '🇧' },
-  { word: 'Butter', meaning: 'Butter', options: ['A: Cheese', 'B: Bread', 'C: Butter', 'D: Milk'], correct: '🇨' },
-  { word: 'Käse', meaning: 'Cheese', options: ['A: Bread', 'B: Butter', 'C: Cheese', 'D: Water'], correct: '🇨' },
-  { word: 'Obst', meaning: 'Fruit', options: ['A: Vegetable', 'B: Fruit', 'C: Milk', 'D: Juice'], correct: '🇧' },
-  { word: 'Gemüse', meaning: 'Vegetable', options: ['A: Fruit', 'B: Cheese', 'C: Vegetable', 'D: Bread'], correct: '🇨' },
-  { word: 'Reis', meaning: 'Rice', options: ['A: Pasta', 'B: Rice', 'C: Bread', 'D: Butter'], correct: '🇧' },
-  { word: 'Nudel', meaning: 'Noodle', options: ['A: Rice', 'B: Bread', 'C: Noodle', 'D: Cheese'], correct: '🇨' },
-  { word: 'Fleisch', meaning: 'Meat', options: ['A: Vegetable', 'B: Cheese', 'C: Meat', 'D: Butter'], correct: '🇨' },
-  { word: 'Huhn', meaning: 'Chicken', options: ['A: Chicken', 'B: Beef', 'C: Fish', 'D: Pork'], correct: '🇦' },
-  { word: 'Fisch', meaning: 'Fish', options: ['A: Chicken', 'B: Beef', 'C: Fish', 'D: Pork'], correct: '🇨' },
-  { word: 'Schwein', meaning: 'Pork', options: ['A: Pork', 'B: Beef', 'C: Fish', 'D: Chicken'], correct: '🇦' },
-  { word: 'Rind', meaning: 'Beef', options: ['A: Chicken', 'B: Pork', 'C: Fish', 'D: Beef'], correct: '🇩' },
-  { word: 'Ei', meaning: 'Egg', options: ['A: Bread', 'B: Egg', 'C: Cheese', 'D: Butter'], correct: '🇧' },
-  { word: 'Zucker', meaning: 'Sugar', options: ['A: Salt', 'B: Pepper', 'C: Sugar', 'D: Honey'], correct: '🇨' },
-  { word: 'Honig', meaning: 'Honey', options: ['A: Jam', 'B: Honey', 'C: Sugar', 'D: Salt'], correct: '🇧' },
-  { word: 'Salz', meaning: 'Salt', options: ['A: Salt', 'B: Sugar', 'C: Pepper', 'D: Honey'], correct: '🇦' },
-  { word: 'Pfeffer', meaning: 'Pepper', options: ['A: Sugar', 'B: Salt', 'C: Pepper', 'D: Honey'], correct: '🇨' },
-  { word: 'Öl', meaning: 'Oil', options: ['A: Butter', 'B: Oil', 'C: Water', 'D: Milk'], correct: '🇧' },
-  { word: 'Essig', meaning: 'Vinegar', options: ['A: Oil', 'B: Vinegar', 'C: Butter', 'D: Water'], correct: '🇧' },
-  { word: 'Marmelade', meaning: 'Jam', options: ['A: Jam', 'B: Honey', 'C: Sugar', 'D: Butter'], correct: '🇦' },
-  { word: 'Bier', meaning: 'Beer', options: ['A: Beer', 'B: Juice', 'C: Water', 'D: Tea'], correct: '🇦' },
-  { word: 'Wein', meaning: 'Wine', options: ['A: Juice', 'B: Wine', 'C: Beer', 'D: Water'], correct: '🇧' },
-  { word: 'Schokolade', meaning: 'Chocolate', options: ['A: Chocolate', 'B: Candy', 'C: Ice Cream', 'D: Cake'], correct: '🇦' },
-  { word: 'Bonbon', meaning: 'Candy', options: ['A: Cake', 'B: Chocolate', 'C: Candy', 'D: Ice Cream'], correct: '🇨' },
-  { word: 'Kuchen', meaning: 'Cake', options: ['A: Ice Cream', 'B: Candy', 'C: Chocolate', 'D: Cake'], correct: '🇩' },
-  { word: 'Eis', meaning: 'Ice Cream', options: ['A: Ice Cream', 'B: Candy', 'C: Cake', 'D: Chocolate'], correct: '🇦' },
-  { word: 'Brotzeit', meaning: 'Snack', options: ['A: Meal', 'B: Snack', 'C: Dinner', 'D: Breakfast'], correct: '🇧' },
-  { word: 'Frühstück', meaning: 'Breakfast', options: ['A: Lunch', 'B: Breakfast', 'C: Dinner', 'D: Snack'], correct: '🇧' },
-  { word: 'Mittagessen', meaning: 'Lunch', options: ['A: Dinner', 'B: Breakfast', 'C: Lunch', 'D: Snack'], correct: '🇨' },
-  { word: 'Abendessen', meaning: 'Dinner', options: ['A: Snack', 'B: Dinner', 'C: Breakfast', 'D: Lunch'], correct: '🇧' },
-  { word: 'Nachtisch', meaning: 'Dessert', options: ['A: Dessert', 'B: Snack', 'C: Breakfast', 'D: Lunch'], correct: '🇦' },
-  { word: 'Apfelsaft', meaning: 'Apple Juice', options: ['A: Orange Juice', 'B: Apple Juice', 'C: Grape Juice', 'D: Water'], correct: '🇧' },
-  { word: 'Orangensaft', meaning: 'Orange Juice', options: ['A: Apple Juice', 'B: Orange Juice', 'C: Grape Juice', 'D: Water'], correct: '🇧' },
-  { word: 'Traubensaft', meaning: 'Grape Juice', options: ['A: Grape Juice', 'B: Apple Juice', 'C: Orange Juice', 'D: Water'], correct: '🇦' },
-  { word: 'Mineralwasser', meaning: 'Mineral Water', options: ['A: Tap Water', 'B: Mineral Water', 'C: Juice', 'D: Tea'], correct: '🇧' },
-  { word: 'Leitungswasser', meaning: 'Tap Water', options: ['A: Mineral Water', 'B: Tap Water', 'C: Juice', 'D: Coffee'], correct: '🇧' },
-  { word: 'Keks', meaning: 'Biscuit', options: ['A: Cake', 'B: Biscuit', 'C: Chocolate', 'D: Candy'], correct: '🇧' },
-  { word: 'Hefeteig', meaning: 'Dough', options: ['A: Dough', 'B: Cake', 'C: Bread', 'D: Biscuit'], correct: '🇦' },
-  { word: 'Pommes', meaning: 'French Fries', options: ['A: Chips', 'B: French Fries', 'C: Bread', 'D: Cake'], correct: '🇧' },
-  { word: 'Chips', meaning: 'Chips', options: ['A: Chips', 'B: French Fries', 'C: Bread', 'D: Candy'], correct: '🇦' },
-  { word: 'Popcorn', meaning: 'Popcorn', options: ['A: Candy', 'B: Chips', 'C: Popcorn', 'D: Biscuits'], correct: '🇨' },
-  { word: 'Weißbrot', meaning: 'White Bread', options: ['A: Brown Bread', 'B: Rye Bread', 'C: White Bread', 'D: Biscuit'], correct: '🇨' },
-  { word: 'Schwarzbrot', meaning: 'Brown Bread', options: ['A: White Bread', 'B: Brown Bread', 'C: Rye Bread', 'D: Biscuit'], correct: '🇧' },
-  { word: 'Roggenbrot', meaning: 'Rye Bread', options: ['A: Brown Bread', 'B: Rye Bread', 'C: White Bread', 'D: Cake'], correct: '🇧' },
-  { word: 'Kürbiskernbrot', meaning: 'Pumpkin Seed Bread', options: ['A: Rye Bread', 'B: Pumpkin Seed Bread', 'C: White Bread', 'D: Brown Bread'], correct: '🇧' },{ "word": "Lehrer", "meaning": "Teacher", "options": [ "A: Teacher", "B: Bird", "C: Phone", "D: Sea" ], "correct": "🇦" }, { "word": "Apfel", "meaning": "Apple", "options": [ "A: Apple", "B: Book", "C: Student", "D: Table" ], "correct": "🇦" }, { "word": "Vogel", "meaning": "Bird", "options": [ "A: Bird", "B: Road", "C: City", "D: Pencil" ], "correct": "🇦" }, { "word": "Auto", "meaning": "Car", "options": [ "A: Car", "B: Road", "C: Pen", "D: Mountain" ], "correct": "🇦" }, { "word": "Wald", "meaning": "Forest", "options": [ "A: Forest", "B: Road", "C: Book", "D: Table" ], "correct": "🇦" }, { "word": "Bleistift", "meaning": "Pencil", "options": [ "A: Forest", "B: Apple", "C: Pencil", "D: Fish" ], "correct": "🇨" }, { "word": "Schüler", "meaning": "Student", "options": [ "A: Table", "B: Student", "C: City", "D: Fish" ], "correct": "🇧" }, { "word": "Auto", "meaning": "Car", "options": [ "A: Food", "B: Apple", "C: Car", "D: Road" ], "correct": "🇨" }, { "word": "Fisch", "meaning": "Fish", "options": [ "A: Fish", "B: Cat", "C: Apple", "D: Bird" ], "correct": "🇦" }, { "word": "Berg", "meaning": "Mountain", "options": [ "A: House", "B: Teacher", "C: Sea", "D: Mountain" ], "correct": "🇩" }, { "word": "Straße", "meaning": "Road", "options": [ "A: Road", "B: Sea", "C: Book", "D: Forest" ], "correct": "🇦" }, { "word": "Schüler", "meaning": "Student", "options": [ "A: Student", "B: Pen", "C: Mountain", "D: Apple" ], "correct": "🇦" }, { "word": "Stadt", "meaning": "City", "options": [ "A: City", "B: Sea", "C: Cat", "D: Car" ], "correct": "🇦" }, { "word": "Tisch", "meaning": "Table", "options": [ "A: Table", "B: Teacher", "C: Mountain", "D: Cat" ], "correct": "🇦" }, { "word": "Schüler", "meaning": "Student", "options": [ "A: Student", "B: Car", "C: Table", "D: Cat" ], "correct": "🇦" }, { "word": "Wald", "meaning": "Forest", "options": [ "A: Book", "B: Teacher", "C: Dog", "D: Forest" ], "correct": "🇩" }, { "word": "Tisch", "meaning": "Table", "options": [ "A: House", "B: Table", "C: Book", "D: Pencil" ], "correct": "🇧" }, { "word": "Stadt", "meaning": "City", "options": [ "A: City", "B: Dog", "C: Teacher", "D: Apple" ], "correct": "🇦" }, { "word": "Buch", "meaning": "Book", "options": [ "A: Fish", "B: Food", "C: Book", "D: Car" ], "correct": "🇨" }, { "word": "Stift", "meaning": "Pen", "options": [ "A: Teacher", "B: Book", "C: Pen", "D: Pencil" ], "correct": "🇨" }, { "word": "Tisch", "meaning": "Table", "options": [ "A: Table", "B: Apple", "C: Car", "D: Pen" ], "correct": "🇦" }, { "word": "Essen", "meaning": "Food", "options": [ "A: Food", "B: Apple", "C: Cat", "D: Table" ], "correct": "🇦" }, { "word": "Fisch", "meaning": "Fish", "options": [ "A: Road", "B: Sea", "C: Fish", "D: Teacher" ], "correct": "🇨" }, { "word": "Telefon", "meaning": "Phone", "options": [ "A: Bird", "B: Student", "C: House", "D: Phone" ], "correct": "🇩" }, { "word": "Haus", "meaning": "House", "options": [ "A: Car", "B: Phone", "C: Fish", "D: House" ], "correct": "🇩" }, { "word": "Stift", "meaning": "Pen", "options": [ "A: Cat", "B: Pen", "C: Table", "D: House" ], "correct": "🇧" }, { "word": "Lehrer", "meaning": "Teacher", "options": [ "A: Road", "B: Pencil", "C: Teacher", "D: Student" ], "correct": "🇨" }, { "word": "Haus", "meaning": "House", "options": [ "A: Bird", "B: House", "C: Food", "D: Pen" ], "correct": "🇧" }, { "word": "Fisch", "meaning": "Fish", "options": [ "A: Fish", "B: Pen", "C: Food", "D: Sea" ], "correct": "🇦" }, { "word": "Vogel", "meaning": "Bird", "options": [ "A: Dog", "B: House", "C: Phone", "D: Bird" ], "correct": "🇩" }, { "word": "Buch", "meaning": "Book", "options": [ "A: Student", "B: Apple", "C: Book", "D: Fish" ], "correct": "🇨" }, { "word": "Fisch", "meaning": "Fish", "options": [ "A: Car", "B: Fish", "C: Table", "D: Pen" ], "correct": "🇧" }, { "word": "Vogel", "meaning": "Bird", "options": [ "A: Bird", "B: Food", "C: Book", "D: Apple" ], "correct": "🇦" }, { "word": "Schüler", "meaning": "Student", "options": [ "A: Teacher", "B: City", "C: Bird", "D: Student" ], "correct": "🇩" }, { "word": "Straße", "meaning": "Road", "options": [ "A: Food", "B: City", "C: House", "D: Road" ], "correct": "🇩" }, { "word": "Bleistift", "meaning": "Pencil", "options": [ "A: City", "B: Pencil", "C: Fish", "D: Student" ], "correct": "🇧" }, { "word": "Auto", "meaning": "Car", "options": [ "A: Student", "B: Car", "C: Food", "D: Apple" ], "correct": "🇧" }, { "word": "Lehrer", "meaning": "Teacher", "options": [ "A: Book", "B: Food", "C: Teacher", "D: Pen" ], "correct": "🇨" }, { "word": "Straße", "meaning": "Road", "options": [ "A: Car", "B: Table", "C: Road", "D: Pen" ], "correct": "🇨" }, { "word": "Tisch", "meaning": "Table", "options": [ "A: Teacher", "B: Apple", "C: Fish", "D: Table" ], "correct": "🇩" }, { "word": "Vogel", "meaning": "Bird", "options": [ "A: Bird", "B: Forest", "C: Phone", "D: Pencil" ], "correct": "🇦" }, { "word": "Stift", "meaning": "Pen", "options": [ "A: Pen", "B: Fish", "C: Sea", "D: Pencil" ], "correct": "🇦" }, { "word": "Buch", "meaning": "Book", "options": [ "A: Book", "B: Fish", "C: Mountain", "D: House" ], "correct": "🇦" }, { "word": "Hund", "meaning": "Dog", "options": [ "A: Dog", "B: Student", "C: Road", "D: Pen" ], "correct": "🇦" }, { "word": "Telefon", "meaning": "Phone", "options": [ "A: Fish", "B: Teacher", "C: Phone", "D: House" ], "correct": "🇨" }, { "word": "Stadt", "meaning": "City", "options": [ "A: Sea", "B: Apple", "C: City", "D: Table" ], "correct": "🇨" }, { "word": "Schüler", "meaning": "Student", "options": [ "A: Food", "B: Student", "C: Phone", "D: Bird" ], "correct": "🇧" }, { "word": "Tisch", "meaning": "Table", "options": [ "A: Fish", "B: Table", "C: Road", "D: Forest" ], "correct": "🇧" }, { "word": "Meer", "meaning": "Sea", "options": [ "A: Fish", "B: Sea", "C: Apple", "D: Food" ], "correct": "🇧" }, { "word": "Telefon", "meaning": "Phone", "options": [ "A: Mountain", "B: Pencil", "C: Phone", "D: Road" ], "correct": "🇨" }, { "word": "Schüler", "meaning": "Student", "options": [ "A: Student", "B: Pencil", "C: City", "D: Phone" ], "correct": "🇦" }, { "word": "Buch", "meaning": "Book", "options": [ "A: Mountain", "B: Teacher", "C: Book", "D: Food" ], "correct": "🇨" }, { "word": "Apfel", "meaning": "Apple", "options": [ "A: House", "B: Apple", "C: Pencil", "D: Bird" ], "correct": "🇧" }, { "word": "Haus", "meaning": "House", "options": [ "A: House", "B: Mountain", "C: Cat", "D: City" ], "correct": "🇦" }, { "word": "Essen", "meaning": "Food", "options": [ "A: Mountain", "B: Pencil", "C: Pen", "D: Food" ], "correct": "🇩" }, { "word": "Stadt", "meaning": "City", "options": [ "A: City", "B: Bird", "C: Pencil", "D: Dog" ], "correct": "🇦" }, { "word": "Auto", "meaning": "Car", "options": [ "A: Car", "B: House", "C: Mountain", "D: Apple" ], "correct": "🇦" }, { "word": "Vogel", "meaning": "Bird", "options": [ "A: Bird", "B: City", "C: Food", "D: Road" ], "correct": "🇦" }, { "word": "Stift", "meaning": "Pen", "options": [ "A: Fish", "B: Mountain", "C: Pen", "D: Bird" ], "correct": "🇨" }, { "word": "Stift", "meaning": "Pen", "options": [ "A: Car", "B: Pen", "C: Apple", "D: Bird" ], "correct": "🇧" }, { "word": "Berg", "meaning": "Mountain", "options": [ "A: Pencil", "B: Mountain", "C: Fish", "D: Car" ], "correct": "🇧" }, { "word": "Berg", "meaning": "Mountain", "options": [ "A: Dog", "B: Road", "C: Car", "D: Mountain" ], "correct": "🇩" }, { "word": "Apfel", "meaning": "Apple", "options": [ "A: Pen", "B: Apple", "C: Student", "D: Forest" ], "correct": "🇧" }, { "word": "Telefon", "meaning": "Phone", "options": [ "A: Pencil", "B: Forest", "C: Phone", "D: Sea" ], "correct": "🇨" }, { "word": "Berg", "meaning": "Mountain", "options": [ "A: Fish", "B: Mountain", "C: Phone", "D: Table" ], "correct": "🇧" }, { "word": "Auto", "meaning": "Car", "options": [ "A: Table", "B: Sea", "C: Road", "D: Car" ], "correct": "🇩" }, { "word": "Apfel", "meaning": "Apple", "options": [ "A: Apple", "B: Pencil", "C: House", "D: Fish" ], "correct": "🇦" }, { "word": "Telefon", "meaning": "Phone", "options": [ "A: Food", "B: Sea", "C: Pen", "D: Phone" ], "correct": "🇩" }, { "word": "Stift", "meaning": "Pen", "options": [ "A: Pen", "B: Table", "C: Student", "D: Book" ], "correct": "🇦" }, { "word": "Wald", "meaning": "Forest", "options": [ "A: Pen", "B: Food", "C: Forest", "D: Apple" ], "correct": "🇨" }, { "word": "Hund", "meaning": "Dog", "options": [ "A: House", "B: Food", "C: Dog", "D: City" ], "correct": "🇨" }, { "word": "Essen", "meaning": "Food", "options": [ "A: Pencil", "B: Food", "C: Student", "D: House" ], "correct": "🇧" }, { "word": "Fisch", "meaning": "Fish", "options": [ "A: Pencil", "B: Road", "C: Bird", "D: Fish" ], "correct": "🇩" }, { "word": "Buch", "meaning": "Book", "options": [ "A: Book", "B: Food", "C: Forest", "D: Car" ], "correct": "🇦" }, { "word": "Auto", "meaning": "Car", "options": [ "A: Pen", "B: Dog", "C: Mountain", "D: Car" ], "correct": "🇩" }, { "word": "Wald", "meaning": "Forest", "options": [ "A: Forest", "B: Mountain", "C: Apple", "D: Pencil" ], "correct": "🇦" }, { "word": "Haus", "meaning": "House", "options": [ "A: Apple", "B: Pen", "C: House", "D: Pencil" ], "correct": "🇨" }, { "word": "Haus", "meaning": "House", "options": [ "A: Forest", "B: Fish", "C: House", "D: Road" ], "correct": "🇨" }, { "word": "Haus", "meaning": "House", "options": [ "A: Pencil", "B: House", "C: Book", "D: Cat" ], "correct": "🇧" }, { "word": "Wald", "meaning": "Forest", "options": [ "A: Food", "B: Bird", "C: Forest", "D: Table" ], "correct": "🇨" }, { "word": "Apfel", "meaning": "Apple", "options": [ "A: Apple", "B: Teacher", "C: Book", "D: Road" ], "correct": "🇦" }, { "word": "Auto", "meaning": "Car", "options": [ "A: Car", "B: Book", "C: Fish", "D: Mountain" ], "correct": "🇦" }, { "word": "Telefon", "meaning": "Phone", "options": [ "A: Bird", "B: Phone", "C: Cat", "D: Student" ], "correct": "🇧" }, { "word": "Haus", "meaning": "House", "options": [ "A: Phone", "B: Table", "C: Sea", "D: House" ], "correct": "🇩" }, { "word": "Schüler", "meaning": "Student", "options": [ "A: Apple", "B: Mountain", "C: Student", "D: Dog" ], "correct": "🇨" }, { "word": "Lehrer", "meaning": "Teacher", "options": [ "A: Sea", "B: Cat", "C: Mountain", "D: Teacher" ], "correct": "🇩" }, { "word": "Hund", "meaning": "Dog", "options": [ "A: Bird", "B: Dog", "C: Cat", "D: Car" ], "correct": "🇧" }, { "word": "Essen", "meaning": "Food", "options": [ "A: Car", "B: Food", "C: Teacher", "D: Cat" ], "correct": "🇧" }, { "word": "Katze", "meaning": "Cat", "options": [ "A: Car", "B: Road", "C: Cat", "D: Phone" ], "correct": "🇨" }, { "word": "Stift", "meaning": "Pen", "options": [ "A: Pencil", "B: Student", "C: Dog", "D: Pen" ], "correct": "🇩" }, { "word": "Stadt", "meaning": "City", "options": [ "A: Road", "B: City", "C: House", "D: Apple" ], "correct": "🇧" }, { "word": "Bleistift", "meaning": "Pencil", "options": [ "A: Pencil", "B: Cat", "C: City", "D: House" ], "correct": "🇦" }, { "word": "Apfel", "meaning": "Apple", "options": [ "A: Car", "B: Apple", "C: City", "D: Phone" ], "correct": "🇧" }, { "word": "Apfel", "meaning": "Apple", "options": [ "A: Apple", "B: Fish", "C: Forest", "D: Road" ], "correct": "🇦" }, { "word": "Telefon", "meaning": "Phone", "options": [ "A: Phone", "B: Pen", "C: Mountain", "D: City" ], "correct": "🇦" }, { "word": "Bleistift", "meaning": "Pencil", "options": [ "A: Pencil", "B: House", "C: Phone", "D: Fish" ], "correct": "🇦" }, { "word": "Auto", "meaning": "Car", "options": [ "A: Car", "B: Dog", "C: Student", "D: Road" ], "correct": "🇦" }, { "word": "Hund", "meaning": "Dog", "options": [ "A: Book", "B: Mountain", "C: Sea", "D: Dog" ], "correct": "🇩" }, { "word": "Straße", "meaning": "Road", "options": [ "A: Mountain", "B: Bird", "C: Apple", "D: Road" ], "correct": "🇩" }, { "word": "Wald", "meaning": "Forest", "options": [ "A: Dog", "B: Cat", "C: Apple", "D: Forest" ], "correct": "🇩" }, { "word": "Meer", "meaning": "Sea", "options": [ "A: Apple", "B: Car", "C: Forest", "D: Sea" ], "correct": "🇩" }, { "word": "Vogel", "meaning": "Bird", "options": [ "A: Pen", "B: Apple", "C: Teacher", "D: Bird" ], "correct": "🇩" }, { "word": "Telefon", "meaning": "Phone", "options": [ "A: Apple", "B: Car", "C: Food", "D: Phone" ], "correct": "🇩" }, { "word": "Auto", "meaning": "Car", "options": [ "A: City", "B: Dog", "C: Car", "D: Book" ], "correct": "🇨" }, { "word": "Berg", "meaning": "Mountain", "options": [ "A: Pencil", "B: Book", "C: Mountain", "D: Food" ], "correct": "🇨" }, { "word": "Bleistift", "meaning": "Pencil", "options": [ "A: Car", "B: Road", "C: Pencil", "D: City" ], "correct": "🇨" }, { "word": "Schüler", "meaning": "Student", "options": [ "A: Student", "B: Pen", "C: Phone", "D: Sea" ], "correct": "🇦" }, { "word": "Meer", "meaning": "Sea", "options": [ "A: Sea", "B: Mountain", "C: Cat", "D: Teacher" ], "correct": "🇦" }, { "word": "Apfel", "meaning": "Apple", "options": [ "A: Forest", "B: Student", "C: Apple", "D: Cat" ], "correct": "🇨" }, { "word": "Schüler", "meaning": "Student", "options": [ "A: Teacher", "B: Student", "C: Cat", "D: Food" ], "correct": "🇧" }, { "word": "Apfel", "meaning": "Apple", "options": [ "A: Mountain", "B: Sea", "C: Cat", "D: Apple" ], "correct": "🇩" }, { "word": "Stadt", "meaning": "City", "options": [ "A: Dog", "B: City", "C: House", "D: Sea" ], "correct": "🇧" }, { "word": "Tisch", "meaning": "Table", "options": [ "A: Table", "B: Mountain", "C: Food", "D: Road" ], "correct": "🇦" }, { "word": "Haus", "meaning": "House", "options": [ "A: Phone", "B: House", "C: Pen", "D: Pencil" ], "correct": "🇧" }, { "word": "Katze", "meaning": "Cat", "options": [ "A: Apple", "B: Book", "C: Cat", "D: Pencil" ], "correct": "🇨" }, { "word": "Straße", "meaning": "Road", "options": [ "A: Phone", "B: Road", "C: Pencil", "D: Teacher" ], "correct": "🇧" }, { "word": "Schüler", "meaning": "Student", "options": [ "A: Phone", "B: Student", "C: Food", "D: Book" ], "correct": "🇧" }, { "word": "Lehrer", "meaning": "Teacher", "options": [ "A: Pen", "B: Teacher", "C: Phone", "D: Cat" ], "correct": "🇧" }, { "word": "Essen", "meaning": "Food", "options": [ "A: Forest", "B: Cat", "C: Food", "D: Mountain" ], "correct": "🇨" }, { "word": "Buch", "meaning": "Book", "options": [ "A: House", "B: Bird", "C: Mountain", "D: Book" ], "correct": "🇩" }, { "word": "Telefon", "meaning": "Phone", "options": [ "A: Car", "B: Forest", "C: Phone", "D: Pencil" ], "correct": "🇨" }, { "word": "Berg", "meaning": "Mountain", "options": [ "A: Bird", "B: Forest", "C: Mountain", "D: Road" ], "correct": "🇨" }, { "word": "Telefon", "meaning": "Phone", "options": [ "A: Cat", "B: Phone", "C: Table", "D: Dog" ], "correct": "🇧" }, { "word": "Wald", "meaning": "Forest", "options": [ "A: Car", "B: Dog", "C: Cat", "D: Forest" ], "correct": "🇩" }, { "word": "Vogel", "meaning": "Bird", "options": [ "A: Pencil", "B: Bird", "C: Dog", "D: Cat" ], "correct": "🇧" }, { "word": "Straße", "meaning": "Road", "options": [ "A: Dog", "B: Cat", "C: Phone", "D: Road" ], "correct": "🇩" }, { "word": "Wald", "meaning": "Forest", "options": [ "A: Pen", "B: Book", "C: Table", "D: Forest" ], "correct": "🇩" }, { "word": "Fisch", "meaning": "Fish", "options": [ "A: Pencil", "B: Car", "C: Fish", "D: Book" ], "correct": "🇨" }, { "word": "Meer", "meaning": "Sea", "options": [ "A: Sea", "B: Table", "C: Car", "D: Cat" ], "correct": "🇦" }, { "word": "Telefon", "meaning": "Phone", "options": [ "A: Apple", "B: Dog", "C: Bird", "D: Phone" ], "correct": "🇩" }, { "word": "Vogel", "meaning": "Bird", "options": [ "A: Bird", "B: Sea", "C: Apple", "D: Road" ], "correct": "🇦" }, { "word": "Tisch", "meaning": "Table", "options": [ "A: Teacher", "B: Mountain", "C: City", "D: Table" ], "correct": "🇩" }, { "word": "Bleistift", "meaning": "Pencil", "options": [ "A: Table", "B: Pencil", "C: Fish", "D: Phone" ], "correct": "🇧" }, { "word": "Fisch", "meaning": "Fish", "options": [ "A: Fish", "B: Road", "C: Forest", "D: Mountain" ], "correct": "🇦" }, { "word": "Stift", "meaning": "Pen", "options": [ "A: Road", "B: Food", "C: Pen", "D: Teacher" ], "correct": "🇨" }, { "word": "Meer", "meaning": "Sea", "options": [ "A: Pencil", "B: Sea", "C: Fish", "D: City" ], "correct": "🇧" }, { "word": "Wald", "meaning": "Forest", "options": [ "A: Sea", "B: Car", "C: Table", "D: Forest" ], "correct": "🇩" }, { "word": "Haus", "meaning": "House", "options": [ "A: Pen", "B: Table", "C: House", "D: Food" ], "correct": "🇨" }, { "word": "Vogel", "meaning": "Bird", "options": [ "A: Bird", "B: Pencil", "C: Food", "D: Pen" ], "correct": "🇦" }, { "word": "Tisch", "meaning": "Table", "options": [ "A: Dog", "B: Teacher", "C: Mountain", "D: Table" ], "correct": "🇩" }, { "word": "Stift", "meaning": "Pen", "options": [ "A: Pen", "B: Dog", "C: Pencil", "D: Bird" ], "correct": "🇦" }, { "word": "Berg", "meaning": "Mountain", "options": [ "A: Pen", "B: Student", "C: Mountain", "D: Fish" ], "correct": "🇨" }, { "word": "Tisch", "meaning": "Table", "options": [ "A: Dog", "B: House", "C: Car", "D: Table" ], "correct": "🇩" }, { "word": "Lehrer", "meaning": "Teacher", "options": [ "A: Teacher", "B: Car", "C: Cat", "D: Dog" ], "correct": "🇦" }, { "word": "Stadt", "meaning": "City", "options": [ "A: Food", "B: Phone", "C: City", "D: Car" ], "correct": "🇨" }, { "word": "Buch", "meaning": "Book", "options": [ "A: Book", "B: Student", "C: Dog", "D: Pencil" ], "correct": "🇦" }, { "word": "Stadt", "meaning": "City", "options": [ "A: Sea", "B: City", "C: Pencil", "D: Car" ], "correct": "🇧" }, { "word": "Katze", "meaning": "Cat", "options": [ "A: Bird", "B: Fish", "C: Cat", "D: Book" ], "correct": "🇨" }, { "word": "Tisch", "meaning": "Table", "options": [ "A: Student", "B: Food", "C: Table", "D: Phone" ], "correct": "🇨" }, { "word": "Straße", "meaning": "Road", "options": [ "A: Road", "B: Table", "C: Car", "D: Cat" ], "correct": "🇦" }, { "word": "Telefon", "meaning": "Phone", "options": [ "A: Sea", "B: Phone", "C: Fish", "D: Food" ], "correct": "🇧" }, { "word": "Stift", "meaning": "Pen", "options": [ "A: Pen", "B: Car", "C: Road", "D: Table" ], "correct": "🇦" }, { "word": "Buch", "meaning": "Book", "options": [ "A: Mountain", "B: Teacher", "C: House", "D: Book" ], "correct": "🇩" }, { "word": "Berg", "meaning": "Mountain", "options": [ "A: Mountain", "B: Apple", "C: City", "D: Sea" ], "correct": "🇦" }, { "word": "Essen", "meaning": "Food", "options": [ "A: Food", "B: Apple", "C: Car", "D: House" ], "correct": "🇦" }, { "word": "Apfel", "meaning": "Apple", "options": [ "A: House", "B: Apple", "C: Sea", "D: City" ], "correct": "🇧" }, { "word": "Katze", "meaning": "Cat", "options": [ "A: Phone", "B: Bird", "C: Dog", "D: Cat" ], "correct": "🇩" }, { "word": "Apfel", "meaning": "Apple", "options": [ "A: Pencil", "B: Book", "C: Teacher", "D: Apple" ], "correct": "🇩" }, { "word": "Apfel", "meaning": "Apple", "options": [ "A: Mountain", "B: Table", "C: Apple", "D: Pen" ], "correct": "🇨" }, { "word": "Berg", "meaning": "Mountain", "options": [ "A: Cat", "B: Pencil", "C: Bird", "D: Mountain" ], "correct": "🇩" }, { "word": "Essen", "meaning": "Food", "options": [ "A: Pencil", "B: Car", "C: Phone", "D: Food" ], "correct": "🇩" }, { "word": "Auto", "meaning": "Car", "options": [ "A: Dog", "B: Cat", "C: Phone", "D: Car" ], "correct": "🇩" }, { "word": "Haus", "meaning": "House", "options": [ "A: Forest", "B: Food", "C: House", "D: Table" ], "correct": "🇨" }, { "word": "Schüler", "meaning": "Student", "options": [ "A: Road", "B: Mountain", "C: Sea", "D: Student" ], "correct": "🇩" }, { "word": "Telefon", "meaning": "Phone", "options": [ "A: Apple", "B: Book", "C: Table", "D: Phone" ], "correct": "🇩" }, { "word": "Fisch", "meaning": "Fish", "options": [ "A: Fish", "B: Apple", "C: Sea", "D: Pencil" ], "correct": "🇦" }, { "word": "Fisch", "meaning": "Fish", "options": [ "A: Student", "B: Fish", "C: Sea", "D: Pen" ], "correct": "🇧" }, { "word": "Berg", "meaning": "Mountain", "options": [ "A: Mountain", "B: Cat", "C: Pen", "D: Student" ], "correct": "🇦" }, { "word": "Fisch", "meaning": "Fish", "options": [ "A: Apple", "B: Food", "C: Fish", "D: Pen" ], "correct": "🇨" }, { "word": "Bleistift", "meaning": "Pencil", "options": [ "A: Pencil", "B: Fish", "C: Cat", "D: Student" ], "correct": "🇦" }, { "word": "Vogel", "meaning": "Bird", "options": [ "A: Dog", "B: Pen", "C: Bird", "D: Cat" ], "correct": "🇨" }, { "word": "Apfel", "meaning": "Apple", "options": [ "A: Apple", "B: Car", "C: Book", "D: Fish" ], "correct": "🇦" }, { "word": "Bleistift", "meaning": "Pencil", "options": [ "A: Pencil", "B: Apple", "C: Food", "D: Sea" ], "correct": "🇦" }, { "word": "Meer", "meaning": "Sea", "options": [ "A: Forest", "B: City", "C: Teacher", "D: Sea" ], "correct": "🇩" }, { "word": "Stift", "meaning": "Pen", "options": [ "A: Food", "B: Bird", "C: Cat", "D: Pen" ], "correct": "🇩" }, { "word": "Buch", "meaning": "Book", "options": [ "A: Book", "B: Fish", "C: City", "D: Table" ], "correct": "🇦" }, { "word": "Telefon", "meaning": "Phone", "options": [ "A: Pen", "B: City", "C: Student", "D: Phone" ], "correct": "🇩" }, { "word": "Straße", "meaning": "Road", "options": [ "A: Table", "B: Dog", "C: Road", "D: Pencil" ], "correct": "🇨" }, { "word": "Auto", "meaning": "Car", "options": [ "A: Apple", "B: Fish", "C: Car", "D: Cat" ], "correct": "🇨" }, { "word": "Lehrer", "meaning": "Teacher", "options": [ "A: Mountain", "B: Teacher", "C: Road", "D: Phone" ], "correct": "🇧" }, { "word": "Vogel", "meaning": "Bird", "options": [ "A: Road", "B: Bird", "C: Apple", "D: Food" ], "correct": "🇧" }, { "word": "Telefon", "meaning": "Phone", "options": [ "A: Phone", "B: Apple", "C: Fish", "D: Bird" ], "correct": "🇦" }, { "word": "Auto", "meaning": "Car", "options": [ "A: Car", "B: Table", "C: Teacher", "D: Pencil" ], "correct": "🇦" }, { "word": "Meer", "meaning": "Sea", "options": [ "A: Dog", "B: Pen", "C: Forest", "D: Sea" ], "correct": "🇩" }, { "word": "Meer", "meaning": "Sea", "options": [ "A: House", "B: Bird", "C: Sea", "D: Food" ], "correct": "🇨" }, { "word": "Apfel", "meaning": "Apple", "options": [ "A: Dog", "B: Pen", "C: Book", "D: Apple" ], "correct": "🇩" }, { "word": "Haus", "meaning": "House", "options": [ "A: Cat", "B: City", "C: Mountain", "D: House" ], "correct": "🇩" }, { "word": "Schüler", "meaning": "Student", "options": [ "A: Student", "B: Pen", "C: Forest", "D: Fish" ], "correct": "🇦" }, { "word": "Meer", "meaning": "Sea", "options": [ "A: Pen", "B: Student", "C: Phone", "D: Sea" ], "correct": "🇩" }, { "word": "Katze", "meaning": "Cat", "options": [ "A: Student", "B: Car", "C: Road", "D: Cat" ], "correct": "🇩" }, { "word": "Berg", "meaning": "Mountain", "options": [ "A: Cat", "B: Teacher", "C: Sea", "D: Mountain" ], "correct": "🇩" }, { "word": "Straße", "meaning": "Road", "options": [ "A: Road", "B: Table", "C: Cat", "D: Apple" ], "correct": "🇦" }, { "word": "Katze", "meaning": "Cat", "options": [ "A: City", "B: Food", "C: Cat", "D: Forest" ], "correct": "🇨" }, { "word": "Haus", "meaning": "House", "options": [ "A: Mountain", "B: Book", "C: Food", "D: House" ], "correct": "🇩" }, { "word": "Straße", "meaning": "Road", "options": [ "A: Table", "B: Road", "C: Pen", "D: Fish" ], "correct": "🇧" }, { "word": "Stadt", "meaning": "City", "options": [ "A: Student", "B: Table", "C: City", "D: Cat" ], "correct": "🇨" }, { "word": "Essen", "meaning": "Food", "options": [ "A: Fish", "B: Sea", "C: Food", "D: Car" ], "correct": "🇨" }, { "word": "Wald", "meaning": "Forest", "options": [ "A: Bird", "B: Table", "C: Mountain", "D: Forest" ], "correct": "🇩" }, { "word": "Stift", "meaning": "Pen", "options": [ "A: Pen", "B: Mountain", "C: Student", "D: Sea" ], "correct": "🇦" }, { "word": "Wald", "meaning": "Forest", "options": [ "A: Bird", "B: Fish", "C: Road", "D: Forest" ], "correct": "🇩" }, { "word": "Apfel", "meaning": "Apple", "options": [ "A: Teacher", "B: Cat", "C: Apple", "D: House" ], "correct": "🇨" }, { "word": "Katze", "meaning": "Cat", "options": [ "A: Cat", "B: Food", "C: Road", "D: Book" ], "correct": "🇦" }, { "word": "Telefon", "meaning": "Phone", "options": [ "A: Pencil", "B: Book", "C: Student", "D: Phone" ], "correct": "🇩" }, { "word": "Tisch", "meaning": "Table", "options": [ "A: Pencil", "B: Sea", "C: Table", "D: Mountain" ], "correct": "🇨" }, { "word": "Auto", "meaning": "Car", "options": [ "A: Teacher", "B: Table", "C: Car", "D: Road" ], "correct": "🇨" }, { "word": "Lehrer", "meaning": "Teacher", "options": [ "A: Bird", "B: Table", "C: Forest", "D: Teacher" ], "correct": "🇩" }, { "word": "Berg", "meaning": "Mountain", "options": [ "A: Dog", "B: Table", "C: City", "D: Mountain" ], "correct": "🇩" }, { "word": "Lehrer", "meaning": "Teacher", "options": [ "A: City", "B: Teacher", "C: Forest", "D: Fish" ], "correct": "🇧" }, { "word": "Fisch", "meaning": "Fish", "options": [ "A: Teacher", "B: Table", "C: Book", "D: Fish" ], "correct": "🇩" }, { "word": "Schüler", "meaning": "Student", "options": [ "A: Sea", "B: Bird", "C: Phone", "D: Student" ], "correct": "🇩" }, { "word": "Auto", "meaning": "Car", "options": [ "A: Phone", "B: Pencil", "C: Car", "D: Food" ], "correct": "🇨" }, { "word": "Bleistift", "meaning": "Pencil", "options": [ "A: Pencil", "B: Table", "C: Phone", "D: Road" ], "correct": "🇦" }, { "word": "Katze", "meaning": "Cat", "options": [ "A: Food", "B: Cat", "C: Dog", "D: Book" ], "correct": "🇧" }, { "word": "Buch", "meaning": "Book", "options": [ "A: Fish", "B: City", "C: Table", "D: Book" ], "correct": "🇩" }, { "word": "Buch", "meaning": "Book", "options": [ "A: Book", "B: Cat", "C: Fish", "D: Dog" ], "correct": "🇦" }, { "word": "Tisch", "meaning": "Table", "options": [ "A: Table", "B: Cat", "C: Sea", "D: Mountain" ], "correct": "🇦" }, { "word": "Katze", "meaning": "Cat", "options": [ "A: Cat", "B: Forest", "C: Fish", "D: Phone" ], "correct": "🇦" }, { "word": "Hund", "meaning": "Dog", "options": [ "A: Dog", "B: Apple", "C: Teacher", "D: Bird" ], "correct": "🇦" }, { "word": "Essen", "meaning": "Food", "options": [ "A: Book", "B: Sea", "C: Food", "D: House" ], "correct": "🇨" }, { "word": "Berg", "meaning": "Mountain", "options": [ "A: Road", "B: Mountain", "C: Food", "D: Dog" ], "correct": "🇧" }, { "word": "Vogel", "meaning": "Bird", "options": [ "A: Car", "B: Bird", "C: Cat", "D: Pen" ], "correct": "🇧" }, { "word": "Apfel", "meaning": "Apple", "options": [ "A: Car", "B: Sea", "C: Apple", "D: Forest" ], "correct": "🇨" }, { "word": "Berg", "meaning": "Mountain", "options": [ "A: Bird", "B: Cat", "C: Mountain", "D: Phone" ], "correct": "🇨" }, { "word": "Apfel", "meaning": "Apple", "options": [ "A: Car", "B: Apple", "C: Bird", "D: Phone" ], "correct": "🇧" }, { "word": "Fisch", "meaning": "Fish", "options": [ "A: Forest", "B: Fish", "C: Table", "D: Cat" ], "correct": "🇧" }, { "word": "Apfel", "meaning": "Apple", "options": [ "A: House", "B: Apple", "C: Table", "D: Cat" ], "correct": "🇧" }, { "word": "Stadt", "meaning": "City", "options": [ "A: City", "B: House", "C: Car", "D: Table" ], "correct": "🇦" }, { "word": "Schüler", "meaning": "Student", "options": [ "A: Student", "B: Dog", "C: Book", "D: Mountain" ], "correct": "🇦" }, { "word": "Katze", "meaning": "Cat", "options": [ "A: Pencil", "B: Apple", "C: Book", "D: Cat" ], "correct": "🇩" }, { "word": "Vogel", "meaning": "Bird", "options": [ "A: Bird", "B: Book", "C: Apple", "D: Car" ], "correct": "🇦" }, { "word": "Fisch", "meaning": "Fish", "options": [ "A: Fish", "B: Pen", "C: Book", "D: City" ], "correct": "🇦" }, { "word": "Fisch", "meaning": "Fish", "options": [ "A: Teacher", "B: Fish", "C: House", "D: Car" ], "correct": "🇧" }, { "word": "Haus", "meaning": "House", "options": [ "A: House", "B: Road", "C: Pencil", "D: Dog" ], "correct": "🇦" }, { "word": "Stadt", "meaning": "City", "options": [ "A: Teacher", "B: Apple", "C: Student", "D: City" ], "correct": "🇩" }, { "word": "Hund", "meaning": "Dog", "options": [ "A: Forest", "B: Dog", "C: Teacher", "D: Table" ], "correct": "🇧" }, { "word": "Schüler", "meaning": "Student", "options": [ "A: Cat", "B: City", "C: Student", "D: Table" ], "correct": "🇨" }, { "word": "Hund", "meaning": "Dog", "options": [ "A: Cat", "B: Dog", "C: Student", "D: Forest" ], "correct": "🇧" }, { "word": "Tisch", "meaning": "Table", "options": [ "A: Table", "B: Teacher", "C: House", "D: Bird" ], "correct": "🇦" }, { "word": "Meer", "meaning": "Sea", "options": [ "A: Sea", "B: Bird", "C: Dog", "D: Student" ], "correct": "🇦" }, { "word": "Auto", "meaning": "Car", "options": [ "A: Pencil", "B: Mountain", "C: Car", "D: Apple" ], "correct": "🇨" }, { "word": "Apfel", "meaning": "Apple", "options": [ "A: Food", "B: Teacher", "C: Student", "D: Apple" ], "correct": "🇩" }, { "word": "Berg", "meaning": "Mountain", "options": [ "A: Car", "B: Sea", "C: Apple", "D: Mountain" ], "correct": "🇩" }, { "word": "Schüler", "meaning": "Student", "options": [ "A: Forest", "B: Student", "C: Apple", "D: Table" ], "correct": "🇧" }, { "word": "Lehrer", "meaning": "Teacher", "options": [ "A: Fish", "B: Teacher", "C: Apple", "D: Road" ], "correct": "🇧" }, { "word": "Buch", "meaning": "Book", "options": [ "A: Cat", "B: Student", "C: Book", "D: Forest" ], "correct": "🇨" }, { "word": "Essen", "meaning": "Food", "options": [ "A: Phone", "B: Food", "C: Sea", "D: Teacher" ], "correct": "🇧" }, { "word": "Auto", "meaning": "Car", "options": [ "A: Fish", "B: Bird", "C: Car", "D: Dog" ], "correct": "🇨" }, { "word": "Essen", "meaning": "Food", "options": [ "A: Pencil", "B: City", "C: Food", "D: Forest" ], "correct": "🇨" }, { "word": "Stift", "meaning": "Pen", "options": [ "A: Student", "B: Book", "C: Bird", "D: Pen" ], "correct": "🇩" }, { "word": "Lehrer", "meaning": "Teacher", "options": [ "A: Pen", "B: Mountain", "C: Pencil", "D: Teacher" ], "correct": "🇩" }, { "word": "Tisch", "meaning": "Table", "options": [ "A: Table", "B: Apple", "C: Fish", "D: Cat" ], "correct": "🇦" }, { "word": "Essen", "meaning": "Food", "options": [ "A: Teacher", "B: Fish", "C: Food", "D: Apple" ], "correct": "🇨" }, { "word": "Schüler", "meaning": "Student", "options": [ "A: Pen", "B: Bird", "C: House", "D: Student" ], "correct": "🇩" }, { "word": "Bleistift", "meaning": "Pencil", "options": [ "A: Pencil", "B: Teacher", "C: Table", "D: Sea" ], "correct": "🇦" }, { "word": "Fisch", "meaning": "Fish", "options": [ "A: Book", "B: Bird", "C: Fish", "D: Cat" ], "correct": "🇨" }, { "word": "Essen", "meaning": "Food", "options": [ "A: House", "B: Car", "C: Food", "D: Apple" ], "correct": "🇨" }, { "word": "Straße", "meaning": "Road", "options": [ "A: Sea", "B: House", "C: Mountain", "D: Road" ], "correct": "🇩" }, { "word": "Berg", "meaning": "Mountain", "options": [ "A: Cat", "B: Road", "C: Phone", "D: Mountain" ], "correct": "🇩" }, { "word": "Meer", "meaning": "Sea", "options": [ "A: House", "B: Apple", "C: Sea", "D: Pen" ], "correct": "🇨" }, { "word": "Wald", "meaning": "Forest", "options": [ "A: Forest", "B: Mountain", "C: Dog", "D: City" ], "correct": "🇦" }, { "word": "Schüler", "meaning": "Student", "options": [ "A: Phone", "B: Dog", "C: Cat", "D: Student" ], "correct": "🇩" }, { "word": "Haus", "meaning": "House", "options": [ "A: Bird", "B: House", "C: Apple", "D: Book" ], "correct": "🇧" }, { "word": "Fisch", "meaning": "Fish", "options": [ "A: Road", "B: Car", "C: Fish", "D: Phone" ], "correct": "🇨" }, { "word": "Tisch", "meaning": "Table", "options": [ "A: Bird", "B: Food", "C: Table", "D: Mountain" ], "correct": "🇨" }, { "word": "Stift", "meaning": "Pen", "options": [ "A: Teacher", "B: Cat", "C: City", "D: Pen" ], "correct": "🇩" }, { "word": "Telefon", "meaning": "Phone", "options": [ "A: Phone", "B: Bird", "C: Pen", "D: Food" ], "correct": "🇦" }, { "word": "Telefon", "meaning": "Phone", "options": [ "A: Cat", "B: Phone", "C: Fish", "D: Teacher" ], "correct": "🇧" }, { "word": "Fisch", "meaning": "Fish", "options": [ "A: Mountain", "B: Phone", "C: Car", "D: Fish" ], "correct": "🇩" }, { "word": "Telefon", "meaning": "Phone", "options": [ "A: Sea", "B: Phone", "C: Road", "D: City" ], "correct": "🇧" }, { "word": "Berg", "meaning": "Mountain", "options": [ "A: Food", "B: Book", "C: Mountain", "D: Teacher" ], "correct": "🇨" }, { "word": "Stift", "meaning": "Pen", "options": [ "A: Student", "B: Cat", "C: Teacher", "D: Pen" ], "correct": "🇩" }, { "word": "Vogel", "meaning": "Bird", "options": [ "A: Bird", "B: Pen", "C: Forest", "D: Car" ], "correct": "🇦" }, { "word": "Vogel", "meaning": "Bird", "options": [ "A: Cat", "B: Forest", "C: Bird", "D: Book" ], "correct": "🇨" }, { "word": "Fisch", "meaning": "Fish", "options": [ "A: Fish", "B: Student", "C: Pencil", "D: Phone" ], "correct": "🇦" }, { "word": "Hund", "meaning": "Dog", "options": [ "A: Car", "B: Fish", "C: Dog", "D: Book" ], "correct": "🇨" }, { "word": "Haus", "meaning": "House", "options": [ "A: House", "B: Car", "C: Bird", "D: Sea" ], "correct": "🇦" }, { "word": "Tisch", "meaning": "Table", "options": [ "A: Table", "B: Road", "C: Student", "D: Cat" ], "correct": "🇦" }, { "word": "Apfel", "meaning": "Apple", "options": [ "A: Apple", "B: Bird", "C: Fish", "D: Table" ], "correct": "🇦" }, { "word": "Stadt", "meaning": "City", "options": [ "A: City", "B: Apple", "C: Car", "D: Mountain" ], "correct": "🇦" }, { "word": "Bleistift", "meaning": "Pencil", "options": [ "A: City", "B: Pencil", "C: Book", "D: Student" ], "correct": "🇧" }, { "word": "Tisch", "meaning": "Table", "options": [ "A: Car", "B: Table", "C: Sea", "D: Phone" ], "correct": "🇧" }, { "word": "Hund", "meaning": "Dog", "options": [ "A: Phone", "B: Teacher", "C: Dog", "D: Road" ], "correct": "🇨" }, { "word": "Fisch", "meaning": "Fish", "options": [ "A: Pen", "B: Fish", "C: Road", "D: Forest" ], "correct": "🇧" }, { "word": "Straße", "meaning": "Road", "options": [ "A: Road", "B: Teacher", "C: Table", "D: Forest" ], "correct": "🇦" }, { "word": "Apfel", "meaning": "Apple", "options": [ "A: Apple", "B: Book", "C: Car", "D: City" ], "correct": "🇦" }, { "word": "Wald", "meaning": "Forest", "options": [ "A: Cat", "B: Phone", "C: Forest", "D: Table" ], "correct": "🇨" }, { "word": "Katze", "meaning": "Cat", "options": [ "A: Pen", "B: Cat", "C: Dog", "D: Bird" ], "correct": "🇧" }, { "word": "Katze", "meaning": "Cat", "options": [ "A: Table", "B: Road", "C: House", "D: Cat" ], "correct": "🇩" }, { "word": "Vogel", "meaning": "Bird", "options": [ "A: Teacher", "B: Pen", "C: Bird", "D: Forest" ], "correct": "🇨" }, { "word": "Essen", "meaning": "Food", "options": [ "A: Forest", "B: Apple", "C: Teacher", "D: Food" ], "correct": "🇩" }, { "word": "Straße", "meaning": "Road", "options": [ "A: Car", "B: Pencil", "C: Road", "D: Sea" ], "correct": "🇨" }, { "word": "Tisch", "meaning": "Table", "options": [ "A: City", "B: Table", "C: Apple", "D: House" ], "correct": "🇧" }, { "word": "Lehrer", "meaning": "Teacher", "options": [ "A: Food", "B: City", "C: Teacher", "D: Forest" ], "correct": "🇨" }, { "word": "Katze", "meaning": "Cat", "options": [ "A: Food", "B: Cat", "C: Pen", "D: Forest" ], "correct": "🇧" }, { "word": "Katze", "meaning": "Cat", "options": [ "A: Student", "B: Pen", "C: Dog", "D: Cat" ], "correct": "🇩" }, { "word": "Apfel", "meaning": "Apple", "options": [ "A: Sea", "B: Apple", "C: Dog", "D: Table" ], "correct": "🇧" }, { "word": "Berg", "meaning": "Mountain", "options": [ "A: Pen", "B: Dog", "C: Road", "D: Mountain" ], "correct": "🇩" }, { "word": "Tisch", "meaning": "Table", "options": [ "A: Table", "B: Fish", "C: House", "D: Student" ], "correct": "🇦" }, { "word": "Telefon", "meaning": "Phone", "options": [ "A: Mountain", "B: Phone", "C: Dog", "D: Sea" ], "correct": "🇧" }, { "word": "Stadt", "meaning": "City", "options": [ "A: Table", "B: Sea", "C: Apple", "D: City" ], "correct": "🇩" }, { "word": "Telefon", "meaning": "Phone", "options": [ "A: Phone", "B: Dog", "C: Table", "D: House" ], "correct": "🇦" }, { "word": "Tisch", "meaning": "Table", "options": [ "A: Table", "B: Sea", "C: Dog", "D: Pencil" ], "correct": "🇦" }, { "word": "Stadt", "meaning": "City", "options": [ "A: Car", "B: City", "C: Fish", "D: Dog" ], "correct": "🇧" }, { "word": "Telefon", "meaning": "Phone", "options": [ "A: Phone", "B: Table", "C: Student", "D: Fish" ], "correct": "🇦" }, { "word": "Katze", "meaning": "Cat", "options": [ "A: Mountain", "B: Food", "C: Cat", "D: Dog" ], "correct": "🇨" }, { "word": "Straße", "meaning": "Road", "options": [ "A: Forest", "B: Phone", "C: Fish", "D: Road" ], "correct": "🇩" }, { "word": "Schüler", "meaning": "Student", "options": [ "A: House", "B: Pen", "C: Student", "D: Mountain" ], "correct": "🇨" }, { "word": "Wald", "meaning": "Forest", "options": [ "A: Book", "B: Forest", "C: Table", "D: Teacher" ], "correct": "🇧" }, { "word": "Vogel", "meaning": "Bird", "options": [ "A: Phone", "B: Table", "C: Road", "D: Bird" ], "correct": "🇩" }, { "word": "Auto", "meaning": "Car", "options": [ "A: Dog", "B: Car", "C: Pencil", "D: Teacher" ], "correct": "🇧" }, { "word": "Wald", "meaning": "Forest", "options": [ "A: Sea", "B: Fish", "C: Forest", "D: Food" ], "correct": "🇨" }, { "word": "Tisch", "meaning": "Table", "options": [ "A: Car", "B: Table", "C: Book", "D: House" ], "correct": "🇧" }, { "word": "Wald", "meaning": "Forest", "options": [ "A: Fish", "B: House", "C: Car", "D: Forest" ], "correct": "🇩" }, { "word": "Straße", "meaning": "Road", "options": [ "A: Road", "B: Teacher", "C: Cat", "D: House" ], "correct": "🇦" }, { "word": "Vogel", "meaning": "Bird", "options": [ "A: Bird", "B: Phone", "C: Pen", "D: City" ], "correct": "🇦" }, { "word": "Straße", "meaning": "Road", "options": [ "A: Book", "B: Bird", "C: Dog", "D: Road" ], "correct": "🇩" }, { "word": "Tisch", "meaning": "Table", "options": [ "A: Fish", "B: Pen", "C: Car", "D: Table" ], "correct": "🇩" }, { "word": "Lehrer", "meaning": "Teacher", "options": [ "A: Road", "B: Table", "C: Teacher", "D: Sea" ], "correct": "🇨" }, { "word": "Lehrer", "meaning": "Teacher", "options": [ "A: Teacher", "B: Bird", "C: Car", "D: Mountain" ], "correct": "🇦" }, { "word": "Meer", "meaning": "Sea", "options": [ "A: Table", "B: Sea", "C: Pen", "D: Pencil" ], "correct": "🇧" }, { "word": "Essen", "meaning": "Food", "options": [ "A: Teacher", "B: Bird", "C: Student", "D: Food" ], "correct": "🇩" }, { "word": "Fisch", "meaning": "Fish", "options": [ "A: Student", "B: Fish", "C: Book", "D: Bird" ], "correct": "🇧" }, { "word": "Meer", "meaning": "Sea", "options": [ "A: House", "B: Sea", "C: Pen", "D: Book" ], "correct": "🇧" }, { "word": "Hund", "meaning": "Dog", "options": [ "A: Dog", "B: Food", "C: Sea", "D: Bird" ], "correct": "🇦" }, { "word": "Berg", "meaning": "Mountain", "options": [ "A: Forest", "B: Book", "C: Mountain", "D: House" ], "correct": "🇨" }, { "word": "Tisch", "meaning": "Table", "options": [ "A: Table", "B: Student", "C: City", "D: Apple" ], "correct": "🇦" }, { "word": "Buch", "meaning": "Book", "options": [ "A: City", "B: Mountain", "C: Table", "D: Book" ], "correct": "🇩" }, { "word": "Meer", "meaning": "Sea", "options": [ "A: Road", "B: Phone", "C: Student", "D: Sea" ], "correct": "🇩" }, { "word": "Apfel", "meaning": "Apple", "options": [ "A: Teacher", "B: Bird", "C: Apple", "D: Table" ], "correct": "🇨" }, { "word": "Haus", "meaning": "House", "options": [ "A: Cat", "B: Teacher", "C: House", "D: Apple" ], "correct": "🇨" }, { "word": "Apfel", "meaning": "Apple", "options": [ "A: Apple", "B: Pen", "C: House", "D: Mountain" ], "correct": "🇦" }, { "word": "Stift", "meaning": "Pen", "options": [ "A: Apple", "B: Pen", "C: Forest", "D: City" ], "correct": "🇧" }, { "word": "Tisch", "meaning": "Table", "options": [ "A: Table", "B: Teacher", "C: Fish", "D: Car" ], "correct": "🇦" }, { "word": "Auto", "meaning": "Car", "options": [ "A: Car", "B: Pencil", "C: Forest", "D: House" ], "correct": "🇦" }, { "word": "Auto", "meaning": "Car", "options": [ "A: Phone", "B: Car", "C: Table", "D: Forest" ], "correct": "🇧" }, { "word": "Lehrer", "meaning": "Teacher", "options": [ "A: Pencil", "B: Teacher", "C: Mountain", "D: Dog" ], "correct": "🇧" }, { "word": "Tisch", "meaning": "Table", "options": [ "A: Table", "B: Road", "C: Bird", "D: Book" ], "correct": "🇦" }, { "word": "Essen", "meaning": "Food", "options": [ "A: Car", "B: Forest", "C: City", "D: Food" ], "correct": "🇩" }, { "word": "Telefon", "meaning": "Phone", "options": [ "A: Phone", "B: Fish", "C: Pen", "D: Road" ], "correct": "🇦" }, { "word": "Bleistift", "meaning": "Pencil", "options": [ "A: Pencil", "B: Car", "C: Forest", "D: Pen" ], "correct": "🇦" }, { "word": "Schüler", "meaning": "Student", "options": [ "A: Student", "B: Sea", "C: Fish", "D: Apple" ], "correct": "🇦" }, { "word": "Stift", "meaning": "Pen", "options": [ "A: Mountain", "B: Pen", "C: City", "D: Phone" ], "correct": "🇧" }, { "word": "Telefon", "meaning": "Phone", "options": [ "A: Phone", "B: Dog", "C: Car", "D: Pencil" ], "correct": "🇦" }, { "word": "Bleistift", "meaning": "Pencil", "options": [ "A: Pen", "B: City", "C: Pencil", "D: Forest" ], "correct": "🇨" }, { "word": "Buch", "meaning": "Book", "options": [ "A: City", "B: House", "C: Bird", "D: Book" ], "correct": "🇩" }, { "word": "Meer", "meaning": "Sea", "options": [ "A: Sea", "B: Table", "C: Pencil", "D: Cat" ], "correct": "🇦" }, { "word": "Auto", "meaning": "Car", "options": [ "A: Pen", "B: Table", "C: Car", "D: Forest" ], "correct": "🇨" }, { "word": "Stadt", "meaning": "City", "options": [ "A: House", "B: Mountain", "C: Road", "D: City" ], "correct": "🇩" }, { "word": "Haus", "meaning": "House", "options": [ "A: Sea", "B: Cat", "C: House", "D: Phone" ], "correct": "🇨" }, { "word": "Wald", "meaning": "Forest", "options": [ "A: House", "B: Forest", "C: Cat", "D: Pen" ], "correct": "🇧" }, { "word": "Straße", "meaning": "Road", "options": [ "A: Student", "B: Sea", "C: House", "D: Road" ], "correct": "🇩" }, { "word": "Hund", "meaning": "Dog", "options": [ "A: Phone", "B: Dog", "C: Car", "D: Food" ], "correct": "🇧" }, { "word": "Fisch", "meaning": "Fish", "options": [ "A: Food", "B: Book", "C: Fish", "D: Table" ], "correct": "🇨" }, { "word": "Buch", "meaning": "Book", "options": [ "A: Book", "B: Bird", "C: Car", "D: Forest" ], "correct": "🇦" }, { "word": "Bleistift", "meaning": "Pencil", "options": [ "A: Pencil", "B: Car", "C: Forest", "D: Teacher" ], "correct": "🇦" }, { "word": "Stift", "meaning": "Pen", "options": [ "A: Pencil", "B: Pen", "C: Food", "D: Phone" ], "correct": "🇧" }, { "word": "Tisch", "meaning": "Table", "options": [ "A: Book", "B: Table", "C: Student", "D: Car" ], "correct": "🇧" }, { "word": "Wald", "meaning": "Forest", "options": [ "A: Forest", "B: Bird", "C: Teacher", "D: Table" ], "correct": "🇦" }, { "word": "Vogel", "meaning": "Bird", "options": [ "A: Bird", "B: Sea", "C: Road", "D: Phone" ], "correct": "🇦" }, { "word": "Buch", "meaning": "Book", "options": [ "A: Book", "B: Mountain", "C: Forest", "D: Car" ], "correct": "🇦" }, { "word": "Lehrer", "meaning": "Teacher", "options": [ "A: Apple", "B: Table", "C: Teacher", "D: Fish" ], "correct": "🇨" }, { "word": "Berg", "meaning": "Mountain", "options": [ "A: Mountain", "B: Pen", "C: Book", "D: Teacher" ], "correct": "🇦" }, { "word": "Vogel", "meaning": "Bird", "options": [ "A: Phone", "B: Pencil", "C: Bird", "D: Sea" ], "correct": "🇨" }, { "word": "Wald", "meaning": "Forest", "options": [ "A: Bird", "B: Forest", "C: Student", "D: Apple" ], "correct": "🇧" }, { "word": "Auto", "meaning": "Car", "options": [ "A: Student", "B: Bird", "C: Pencil", "D: Car" ], "correct": "🇩" }, { "word": "Berg", "meaning": "Mountain", "options": [ "A: House", "B: Cat", "C: Mountain", "D: Student" ], "correct": "🇨" }, { "word": "Apfel", "meaning": "Apple", "options": [ "A: Apple", "B: Pen", "C: Phone", "D: Pencil" ], "correct": "🇦" }, { "word": "Katze", "meaning": "Cat", "options": [ "A: Dog", "B: House", "C: Cat", "D: Book" ], "correct": "🇨" }, { "word": "Vogel", "meaning": "Bird", "options": [ "A: Pen", "B: Mountain", "C: Cat", "D: Bird" ], "correct": "🇩" }, { "word": "Straße", "meaning": "Road", "options": [ "A: Pencil", "B: Road", "C: Cat", "D: Apple" ], "correct": "🇧" }, { "word": "Buch", "meaning": "Book", "options": [ "A: Phone", "B: Road", "C: Book", "D: Pencil" ], "correct": "🇨" }, { "word": "Telefon", "meaning": "Phone", "options": [ "A: Forest", "B: Pencil", "C: Book", "D: Phone" ], "correct": "🇩" }, { "word": "Straße", "meaning": "Road", "options": [ "A: Apple", "B: Bird", "C: Food", "D: Road" ], "correct": "🇩" }, { "word": "Auto", "meaning": "Car", "options": [ "A: Car", "B: Pencil", "C: Road", "D: City" ], "correct": "🇦" }, { "word": "Auto", "meaning": "Car", "options": [ "A: Road", "B: Car", "C: Student", "D: Teacher" ], "correct": "🇧" }, { "word": "Vogel", "meaning": "Bird", "options": [ "A: City", "B: Pencil", "C: Student", "D: Bird" ], "correct": "🇩" }, { "word": "Stift", "meaning": "Pen", "options": [ "A: Book", "B: Pen", "C: Mountain", "D: Student" ], "correct": "🇧" }, { "word": "Stift", "meaning": "Pen", "options": [ "A: Pen", "B: Bird", "C: Dog", "D: Apple" ], "correct": "🇦" }, { "word": "Apfel", "meaning": "Apple", "options": [ "A: Teacher", "B: Mountain", "C: Apple", "D: Forest" ], "correct": "🇨" }, { "word": "Bleistift", "meaning": "Pencil", "options": [ "A: Car", "B: Cat", "C: Pencil", "D: Student" ], "correct": "🇨" }, { "word": "Berg", "meaning": "Mountain", "options": [ "A: Bird", "B: Apple", "C: Mountain", "D: Forest" ], "correct": "🇨" }, { "word": "Telefon", "meaning": "Phone", "options": [ "A: Student", "B: Phone", "C: Food", "D: Pen" ], "correct": "🇧" }, { "word": "Straße", "meaning": "Road", "options": [ "A: Car", "B: Apple", "C: Table", "D: Road" ], "correct": "🇩" }, { "word": "Telefon", "meaning": "Phone", "options": [ "A: Teacher", "B: Phone", "C: Sea", "D: Bird" ], "correct": "🇧" }, { "word": "Fisch", "meaning": "Fish", "options": [ "A: Fish", "B: Car", "C: Bird", "D: Phone" ], "correct": "🇦" }, { "word": "Stift", "meaning": "Pen", "options": [ "A: Pen", "B: Apple", "C: Fish", "D: Bird" ], "correct": "🇦" }, { "word": "Auto", "meaning": "Car", "options": [ "A: Car", "B: Cat", "C: Mountain", "D: Pen" ], "correct": "🇦" }, { "word": "Katze", "meaning": "Cat", "options": [ "A: Cat", "B: House", "C: Book", "D: Pencil" ], "correct": "🇦" }, { "word": "Wald", "meaning": "Forest", "options": [ "A: Apple", "B: Pen", "C: Bird", "D: Forest" ], "correct": "🇩" }, { "word": "Katze", "meaning": "Cat", "options": [ "A: Car", "B: Forest", "C: Road", "D: Cat" ], "correct": "🇩" }, { "word": "Lehrer", "meaning": "Teacher", "options": [ "A: Food", "B: Fish", "C: Sea", "D: Teacher" ], "correct": "🇩" }, { "word": "Hund", "meaning": "Dog", "options": [ "A: Dog", "B: Book", "C: Teacher", "D: Table" ], "correct": "🇦" }, { "word": "Buch", "meaning": "Book", "options": [ "A: Table", "B: Phone", "C: Book", "D: Road" ], "correct": "🇨" }, { "word": "Tisch", "meaning": "Table", "options": [ "A: Dog", "B: Phone", "C: Sea", "D: Table" ], "correct": "🇩" }, { "word": "Stadt", "meaning": "City", "options": [ "A: Book", "B: House", "C: Food", "D: City" ], "correct": "🇩" }, { "word": "Berg", "meaning": "Mountain", "options": [ "A: Mountain", "B: Road", "C: Car", "D: City" ], "correct": "🇦" }, { "word": "Vogel", "meaning": "Bird", "options": [ "A: Phone", "B: Bird", "C: Cat", "D: Teacher" ], "correct": "🇧" }, { "word": "Stift", "meaning": "Pen", "options": [ "A: Cat", "B: Fish", "C: Pen", "D: Dog" ], "correct": "🇨" }, { "word": "Apfel", "meaning": "Apple", "options": [ "A: Apple", "B: Bird", "C: Cat", "D: Pencil" ], "correct": "🇦" }, { "word": "Straße", "meaning": "Road", "options": [ "A: Dog", "B: Road", "C: Apple", "D: Table" ], "correct": "🇧" }
-];
+  { word: 'Tisch', meaning: 'Table', options: ['A: Table', 'B: Chair', 'C: Door', 'D: Window'], correct: '🇦' },
+  { word: 'Stuhl', meaning: 'Chair', options: ['A: Table', 'B: Chair', 'C: Bed', 'D: Lamp'], correct: '🇧' },
+  { word: 'Brot', meaning: 'Bread', options: ['A: Bread', 'B: Butter', 'C: Cake', 'D: Milk'], correct: '🇦' },
+  { word: 'Wasser', meaning: 'Water', options: ['A: Water', 'B: Juice', 'C: Coffee', 'D: Tea'], correct: '🇦' },
+  { word: 'Auto', meaning: 'Car', options: ['A: Train', 'B: Bus', 'C: Car', 'D: Plane'], correct: '🇨' },
+  { word: 'Blume', meaning: 'Flower', options: ['A: Tree', 'B: Grass', 'C: Flower', 'D: Leaf'], correct: '🇨' },
+  { word: 'Hund', meaning: 'Dog', options: ['A: Cat', 'B: Bird', 'C: Dog', 'D: Fish'], correct: '🇨' },
+  { word: 'Katze', meaning: 'Cat', options: ['A: Rabbit', 'B: Cat', 'C: Dog', 'D: Bird'], correct: '🇧' },
+  { word: 'Fisch', meaning: 'Fish', options: ['A: Fish', 'B: Chicken', 'C: Meat', 'D: Egg'], correct: '🇦' },
+  { word: 'Buch', meaning: 'Book', options: ['A: Book', 'B: Pen', 'C: Notebook', 'D: Paper'], correct: '🇦' },
+  { word: 'Tür', meaning: 'Door', options: ['A: Window', 'B: Door', 'C: Wall', 'D: Floor'], correct: '🇧' },
+  { word: 'Fenster', meaning: 'Window', options: ['A: Roof', 'B: Window', 'C: Wall', 'D: Door'], correct: '🇧' },
+  { word: 'Lampe', meaning: 'Lamp', options: ['A: Light', 'B: Lamp', 'C: Fan', 'D: Clock'], correct: '🇧' },
+  { word: 'Tasche', meaning: 'Bag', options: ['A: Bag', 'B: Hat', 'C: Shoes', 'D: Jacket'], correct: '🇦' },
+  { word: 'Schule', meaning: 'School', options: ['A: School', 'B: Office', 'C: Library', 'D: Home'], correct: '🇦' },
+  { word: 'Lehrer', meaning: 'Teacher', options: ['A: Student', 'B: Principal', 'C: Teacher', 'D: Class'], correct: '🇨' },
+  { word: 'Bleistift', meaning: 'Pencil', options: ['A: Pen', 'B: Marker', 'C: Pencil', 'D: Eraser'], correct: '🇨' },
+  { word: 'Rad', meaning: 'Bicycle', options: ['A: Car', 'B: Bicycle', 'C: Train', 'D: Plane'], correct: '🇧' },
+  { word: 'Baum', meaning: 'Tree', options: ['A: Tree', 'B: Forest', 'C: Flower', 'D: Grass'], correct: '🇦' },
+  { word: 'Hut', meaning: 'Hat', options: ['A: Shoes', 'B: Jacket', 'C: Hat', 'D: Shirt'], correct: '🇨' },
+  { word: 'Zeitung', meaning: 'Newspaper', options: ['A: Magazine', 'B: Newspaper', 'C: Book', 'D: Notebook'], correct: '🇧' },
+  { word: 'Stadt', meaning: 'City', options: ['A: Village', 'B: Street', 'C: City', 'D: Country'], correct: '🇨' },
+  { word: 'Torte', meaning: 'Cake', options: ['A: Bread', 'B: Cake', 'C: Cookie', 'D: Pie'], correct: '🇧' },
+  { word: 'Vogel', meaning: 'Bird', options: ['A: Bird', 'B: Fish', 'C: Cat', 'D: Dog'], correct: '🇦' },
+  { word: 'Tischdecke', meaning: 'Tablecloth', options: ['A: Tablecloth', 'B: Curtain', 'C: Blanket', 'D: Carpet'], correct: '🇦' },
+  { word: 'Kind', meaning: 'Child', options: ['A: Baby', 'B: Child', 'C: Parent', 'D: Adult'], correct: '🇧' },
+  { word: 'Bett', meaning: 'Bed', options: ['A: Chair', 'B: Sofa', 'C: Bed', 'D: Desk'], correct: '🇨' },
+  { word: 'Tasse', meaning: 'Cup', options: ['A: Plate', 'B: Bowl', 'C: Cup', 'D: Glass'], correct: '🇨' },
+  { word: 'Schrank', meaning: 'Wardrobe', options: ['A: Shelf', 'B: Wardrobe', 'C: Drawer', 'D: Mirror'], correct: '🇧' },
+  { word: 'Maus', meaning: 'Mouse', options: ['A: Rat', 'B: Mouse', 'C: Cat', 'D: Bird'], correct: '🇧' },
+  { word: 'Wand', meaning: 'Wall', options: ['A: Roof', 'B: Wall', 'C: Door', 'D: Window'], correct: '🇧' },
+  { word: 'Kuh', meaning: 'Cow', options: ['A: Horse', 'B: Cow', 'C: Goat', 'D: Sheep'], correct: '🇧' },
+  { word: 'Blatt', meaning: 'Leaf', options: ['A: Leaf', 'B: Flower', 'C: Grass', 'D: Tree'], correct: '🇦' },
+  { word: 'Hemd', meaning: 'Shirt', options: ['A: Pants', 'B: Jacket', 'C: Shirt', 'D: Hat'], correct: '🇨' },
+  { word: 'Jacke', meaning: 'Jacket', options: ['A: Coat', 'B: Jacket', 'C: Sweater', 'D: Scarf'], correct: '🇧' },
+  { word: 'Schuh', meaning: 'Shoe', options: ['A: Sandal', 'B: Boot', 'C: Shoe', 'D: Sock'], correct: '🇨' },
+  { word: 'Zug', meaning: 'Train', options: ['A: Car', 'B: Plane', 'C: Train', 'D: Bus'], correct: '🇨' },
+  { word: 'Stift', meaning: 'Pen', options: ['A: Pencil', 'B: Pen', 'C: Marker', 'D: Eraser'], correct: '🇧' },
+  { word: 'Sonne', meaning: 'Sun', options: ['A: Moon', 'B: Sun', 'C: Star', 'D: Sky'], correct: '🇧' },
+  { word: 'Wolke', meaning: 'Cloud', options: ['A: Sky', 'B: Rain', 'C: Cloud', 'D: Fog'], correct: '🇨' },
+  { word: 'Auto', meaning: 'Car', options: ['A: Bus', 'B: Train', 'C: Car', 'D: Plane'], correct: '🇨' },
+  { word: 'Brot', meaning: 'Bread', options: ['A: Cake', 'B: Bread', 'C: Cookie', 'D: Pie'], correct: '🇧' },
+  { word: 'Baum', meaning: 'Tree', options: ['A: Plant', 'B: Grass', 'C: Tree', 'D: Bush'], correct: '🇨' },
+  { word: 'Hund', meaning: 'Dog', options: ['A: Dog', 'B: Cat', 'C: Cow', 'D: Bird'], correct: '🇦' },
+  { word: 'Vogel', meaning: 'Bird', options: ['A: Cat', 'B: Bird', 'C: Dog', 'D: Fish'], correct: '🇧' },
+  { word: 'Fahrrad', meaning: 'Bicycle', options: ['A: Car', 'B: Train', 'C: Bicycle', 'D: Airplane'], correct: '🇩' },
+  { word: 'Fahrzeug', meaning: 'Vehicle', options: ['A: Airplane', 'B: Car', 'C: Vehicle', 'D: Train'], correct: '🇨' },
+  { word: 'Regen', meaning: 'Rain', options: ['A: Sun', 'B: Rain', 'C: Snow', 'D: Fog'], correct: '🇧' },
+  { word: 'Schnee', meaning: 'Snow', options: ['A: Snow', 'B: Rain', 'C: Storm', 'D: Cloud'], correct: '🇦' },
+  { word: 'Eis', meaning: 'Ice', options: ['A: Snow', 'B: Ice', 'C: Water', 'D: Rain'], correct: '🇧' },
+  { word: 'Berg', meaning: 'Mountain', options: ['A: Hill', 'B: Mountain', 'C: Sea', 'D: Plain'], correct: '🇧' },
+  { word: 'Tal', meaning: 'Valley', options: ['A: Hill', 'B: Valley', 'C: Mountain', 'D: Lake'], correct: '🇧' },
+  { word: 'Fluss', meaning: 'River', options: ['A: Ocean', 'B: River', 'C: Lake', 'D: Sea'], correct: '🇧' },
+  { word: 'Meer', meaning: 'Sea', options: ['A: Ocean', 'B: Lake', 'C: River', 'D: Sea'], correct: '🇩' },
+  { word: 'Insel', meaning: 'Island', options: ['A: Mountain', 'B: Island', 'C: Lake', 'D: River'], correct: '🇧' },
+  { word: 'Wald', meaning: 'Forest', options: ['A: Desert', 'B: Forest', 'C: Lake', 'D: Mountain'], correct: '🇧' },
+  { word: 'See', meaning: 'Lake', options: ['A: Sea', 'B: River', 'C: Mountain', 'D: Lake'], correct: '🇩' },
+  { word: 'Land', meaning: 'Country', options: ['A: Town', 'B: Country', 'C: Village', 'D: City'], correct: '🇧' },
+  { word: 'Stadt', meaning: 'City', options: ['A: Village', 'B: City', 'C: Town', 'D: Country'], correct: '🇧' }
+  ],
+  A2: [
+    { word: 'Abend', meaning: 'Evening', options: ['A: Morning', 'B: Evening', 'C: Night', 'D: Afternoon'], correct: '🇧' },
+  { word: 'Arzt', meaning: 'Doctor', options: ['A: Teacher', 'B: Doctor', 'C: Nurse', 'D: Patient'], correct: '🇧' },
+  { word: 'Ausland', meaning: 'Abroad', options: ['A: Country', 'B: Abroad', 'C: City', 'D: Town'], correct: '🇧' },
+  { word: 'Bank', meaning: 'Bank', options: ['A: Bank', 'B: Money', 'C: Store', 'D: Office'], correct: '🇦' },
+  { word: 'Büro', meaning: 'Office', options: ['A: Shop', 'B: School', 'C: Office', 'D: Library'], correct: '🇩' },
+  { word: 'Essen', meaning: 'Food', options: ['A: Food', 'B: Drink', 'C: Fruit', 'D: Vegetable'], correct: '🇦' },
+  { word: 'Familie', meaning: 'Family', options: ['A: Family', 'B: Friends', 'C: Parents', 'D: Children'], correct: '🇦' },
+  { word: 'Ferien', meaning: 'Holiday', options: ['A: Weekend', 'B: Break', 'C: Holiday', 'D: School'], correct: '🇩' },
+  { word: 'Flughafen', meaning: 'Airport', options: ['A: Hotel', 'B: Train station', 'C: Airport', 'D: Bus stop'], correct: '🇩' },
+  { word: 'Freund', meaning: 'Friend', options: ['A: Parent', 'B: Teacher', 'C: Friend', 'D: Neighbor'], correct: '🇧' },
+  { word: 'Geschenk', meaning: 'Gift', options: ['A: Present', 'B: Letter', 'C: Food', 'D: Card'], correct: '🇦' },
+  { word: 'Gesundheit', meaning: 'Health', options: ['A: Illness', 'B: Health', 'C: Disease', 'D: Fever'], correct: '🇧' },
+  { word: 'Glück', meaning: 'Happiness', options: ['A: Sadness', 'B: Joy', 'C: Luck', 'D: Happiness'], correct: '🇩' },
+  { word: 'Hoffnung', meaning: 'Hope', options: ['A: Despair', 'B: Hope', 'C: Anger', 'D: Fear'], correct: '🇧' },
+  { word: 'Hotel', meaning: 'Hotel', options: ['A: Restaurant', 'B: Hotel', 'C: Cafe', 'D: Store'], correct: '🇧' },
+  { word: 'Insel', meaning: 'Island', options: ['A: River', 'B: Ocean', 'C: Mountain', 'D: Island'], correct: '🇩' },
+  { word: 'Jahr', meaning: 'Year', options: ['A: Week', 'B: Month', 'C: Day', 'D: Year'], correct: '🇩' },
+  { word: 'Kaffee', meaning: 'Coffee', options: ['A: Tea', 'B: Coffee', 'C: Water', 'D: Juice'], correct: '🇧' },
+  { word: 'Kamera', meaning: 'Camera', options: ['A: Phone', 'B: Camera', 'C: Laptop', 'D: Tablet'], correct: '🇧' },
+  { word: 'Kleider', meaning: 'Clothes', options: ['A: Shoes', 'B: Clothes', 'C: Hat', 'D: Jacket'], correct: '🇧' },
+  { word: 'Licht', meaning: 'Light', options: ['A: Darkness', 'B: Light', 'C: Shadow', 'D: Fire'], correct: '🇧' },
+  { word: 'Mensch', meaning: 'Person', options: ['A: Animal', 'B: Person', 'C: Child', 'D: Woman'], correct: '🇧' },
+  { word: 'Möglich', meaning: 'Possible', options: ['A: Impossible', 'B: Unlikely', 'C: Possible', 'D: Available'], correct: '🇩' },
+  { word: 'Natur', meaning: 'Nature', options: ['A: Weather', 'B: Nature', 'C: Environment', 'D: Forest'], correct: '🇧' },
+  { word: 'Obst', meaning: 'Fruit', options: ['A: Vegetable', 'B: Food', 'C: Fruit', 'D: Dairy'], correct: '🇧' },
+  { word: 'Post', meaning: 'Mail', options: ['A: Phone', 'B: Internet', 'C: Mail', 'D: Email'], correct: '🇩' },
+  { word: 'Reise', meaning: 'Trip', options: ['A: Trip', 'B: Journey', 'C: Flight', 'D: Drive'], correct: '🇧' },
+  { word: 'Restaurant', meaning: 'Restaurant', options: ['A: Cafe', 'B: Hotel', 'C: Restaurant', 'D: Bar'], correct: '🇦' },
+  { word: 'Schule', meaning: 'School', options: ['A: College', 'B: School', 'C: University', 'D: Office'], correct: '🇧' },
+  { word: 'Schwimmbad', meaning: 'Swimming pool', options: ['A: Beach', 'B: Swimming pool', 'C: Ocean', 'D: River'], correct: '🇧' },
+  { word: 'Stadt', meaning: 'City', options: ['A: Village', 'B: Town', 'C: City', 'D: Country'], correct: '🇧' },
+  { word: 'Straße', meaning: 'Street', options: ['A: Park', 'B: Street', 'C: Square', 'D: Building'], correct: '🇧' },
+  { word: 'Telefon', meaning: 'Telephone', options: ['A: Phone', 'B: Laptop', 'C: TV', 'D: Radio'], correct: '🇦' },
+  { word: 'Tier', meaning: 'Animal', options: ['A: Person', 'B: Animal', 'C: Plant', 'D: Insect'], correct: '🇧' },
+  { word: 'Universität', meaning: 'University', options: ['A: School', 'B: College', 'C: University', 'D: Highschool'], correct: '🇩' },
+  { word: 'Urlaub', meaning: 'Vacation', options: ['A: School', 'B: Job', 'C: Vacation', 'D: Weekend'], correct: '🇩' },
+  { word: 'Vater', meaning: 'Father', options: ['A: Mother', 'B: Father', 'C: Brother', 'D: Sister'], correct: '🇧' },
+  { word: 'Woche', meaning: 'Week', options: ['A: Month', 'B: Year', 'C: Week', 'D: Day'], correct: '🇩' },
+  { word: 'Zukunft', meaning: 'Future', options: ['A: Past', 'B: Future', 'C: Present', 'D: History'], correct: '🇧' },
+  { word: 'Zug', meaning: 'Train', options: ['A: Car', 'B: Plane', 'C: Bus', 'D: Train'], correct: '🇩' },
+  { word: 'Ziel', meaning: 'Goal', options: ['A: Goal', 'B: Target', 'C: End', 'D: Dream'], correct: '🇧' },
+  { word: 'Zeitung', meaning: 'Newspaper', options: ['A: Magazine', 'B: Newspaper', 'C: Book', 'D: Journal'], correct: '🇧' },
+  { word: 'Zentrum', meaning: 'Center', options: ['A: Side', 'B: Center', 'C: Top', 'D: Corner'], correct: '🇧' },
+  { word: 'Zahnarzt', meaning: 'Dentist', options: ['A: Doctor', 'B: Dentist', 'C: Nurse', 'D: Teacher'], correct: '🇧' },
+  { word: 'Zeichen', meaning: 'Sign', options: ['A: Symbol', 'B: Sign', 'C: Mark', 'D: Letter'], correct: '🇧' },
+  { word: 'Zunge', meaning: 'Tongue', options: ['A: Lip', 'B: Tongue', 'C: Teeth', 'D: Cheeks'], correct: '🇧' },
+  { word: 'Ziel', meaning: 'Target', options: ['A: Target', 'B: Aim', 'C: Goal', 'D: End'], correct: '🇩' }
+  ],
+  B1: [
+    { word: 'Abenteuer', meaning: 'Adventure', options: ['A: Routine', 'B: Challenge', 'C: Adventure', 'D: Job'], correct: '🇨' },
+  { word: 'Angebot', meaning: 'Offer', options: ['A: Request', 'B: Offer', 'C: Answer', 'D: Idea'], correct: '🇧' },
+  { word: 'Ausdruck', meaning: 'Expression', options: ['A: Thought', 'B: Expression', 'C: Message', 'D: Feeling'], correct: '🇧' },
+  { word: 'Bedingung', meaning: 'Condition', options: ['A: Rule', 'B: Term', 'C: Condition', 'D: Instruction'], correct: '🇩' },
+  { word: 'Beitrag', meaning: 'Contribution', options: ['A: Payment', 'B: Post', 'C: Contribution', 'D: Reply'], correct: '🇩' },
+  { word: 'Behörde', meaning: 'Authority', options: ['A: Office', 'B: Department', 'C: Authority', 'D: Worker'], correct: '🇩' },
+  { word: 'Bewerbung', meaning: 'Application', options: ['A: Request', 'B: Application', 'C: Offer', 'D: Appointment'], correct: '🇧' },
+  { word: 'Beziehung', meaning: 'Relationship', options: ['A: Friendship', 'B: Relationship', 'C: Friendship', 'D: Partnership'], correct: '🇧' },
+  { word: 'Bildung', meaning: 'Education', options: ['A: Learning', 'B: Knowledge', 'C: Education', 'D: Information'], correct: '🇩' },
+  { word: 'Chance', meaning: 'Chance', options: ['A: Opportunity', 'B: Time', 'C: Moment', 'D: Chance'], correct: '🇩' },
+  { word: 'Debatte', meaning: 'Debate', options: ['A: Discussion', 'B: Disagreement', 'C: Debate', 'D: Agreement'], correct: '🇨' },
+  { word: 'Dienstleistung', meaning: 'Service', options: ['A: Payment', 'B: Product', 'C: Service', 'D: Delivery'], correct: '🇨' },
+  { word: 'Einstellung', meaning: 'Attitude', options: ['A: Work', 'B: Attitude', 'C: Job', 'D: Opinion'], correct: '🇧' },
+  { word: 'Ereignis', meaning: 'Event', options: ['A: Experience', 'B: Event', 'C: Celebration', 'D: Occasion'], correct: '🇧' },
+  { word: 'Erfahrung', meaning: 'Experience', options: ['A: Expertise', 'B: Understanding', 'C: Experience', 'D: Memory'], correct: '🇩' },
+  { word: 'Fähigkeit', meaning: 'Ability', options: ['A: Talent', 'B: Ability', 'C: Skill', 'D: Power'], correct: '🇧' },
+  { word: 'Fortschritt', meaning: 'Progress', options: ['A: Stagnation', 'B: Setback', 'C: Progress', 'D: Decline'], correct: '🇩' },
+  { word: 'Freiheit', meaning: 'Freedom', options: ['A: Power', 'B: Authority', 'C: Freedom', 'D: Independence'], correct: '🇩' },
+  { word: 'Geduld', meaning: 'Patience', options: ['A: Anger', 'B: Patience', 'C: Frustration', 'D: Energy'], correct: '🇧' },
+  { word: 'Gegenteil', meaning: 'Opposite', options: ['A: Similar', 'B: Equal', 'C: Opposite', 'D: Different'], correct: '🇩' },
+  { word: 'Gesellschaft', meaning: 'Society', options: ['A: Community', 'B: Organization', 'C: Group', 'D: Society'], correct: '🇩' },
+  { word: 'Glauben', meaning: 'Belief', options: ['A: Opinion', 'B: Truth', 'C: Fact', 'D: Belief'], correct: '🇩' },
+  { word: 'Grenze', meaning: 'Border', options: ['A: Center', 'B: Border', 'C: End', 'D: Middle'], correct: '🇧' },
+  { word: 'Herausforderung', meaning: 'Challenge', options: ['A: Test', 'B: Task', 'C: Challenge', 'D: Help'], correct: '🇨' },
+  { word: 'Hoffnung', meaning: 'Hope', options: ['A: Faith', 'B: Despair', 'C: Hope', 'D: Truth'], correct: '🇩' },
+  { word: 'Kompetenz', meaning: 'Competence', options: ['A: Skill', 'B: Experience', 'C: Knowledge', 'D: Competence'], correct: '🇩' },
+  { word: 'Kritik', meaning: 'Criticism', options: ['A: Support', 'B: Praise', 'C: Criticism', 'D: Approval'], correct: '🇨' },
+  { word: 'Lernziel', meaning: 'Learning objective', options: ['A: Objective', 'B: Goal', 'C: Plan', 'D: Lesson'], correct: '🇩' },
+  { word: 'Mangel', meaning: 'Deficiency', options: ['A: Surplus', 'B: Lack', 'C: Deficiency', 'D: Excess'], correct: '🇧' },
+  { word: 'Motivation', meaning: 'Motivation', options: ['A: Goal', 'B: Drive', 'C: Motivation', 'D: Force'], correct: '🇩' },
+  { word: 'Möglichkeit', meaning: 'Possibility', options: ['A: Opportunity', 'B: Limitation', 'C: Possibility', 'D: Choice'], correct: '🇩' },
+  { word: 'Nachricht', meaning: 'Message', options: ['A: Communication', 'B: Message', 'C: Call', 'D: Talk'], correct: '🇧' },
+  { word: 'Notwendigkeit', meaning: 'Necessity', options: ['A: Luxury', 'B: Possibility', 'C: Need', 'D: Requirement'], correct: '🇩' },
+  { word: 'Politik', meaning: 'Politics', options: ['A: Law', 'B: Governance', 'C: Politics', 'D: Society'], correct: '🇩' },
+  { word: 'Qualität', meaning: 'Quality', options: ['A: Standard', 'B: Level', 'C: Quality', 'D: Amount'], correct: '🇩' },
+  { word: 'Recht', meaning: 'Law', options: ['A: Law', 'B: Freedom', 'C: Justice', 'D: Rule'], correct: '🇩' },
+  { word: 'Reise', meaning: 'Journey', options: ['A: Destination', 'B: Trip', 'C: Flight', 'D: Tour'], correct: '🇧' },
+  { word: 'Sicherheit', meaning: 'Security', options: ['A: Risk', 'B: Danger', 'C: Safety', 'D: Protection'], correct: '🇩' },
+  { word: 'Verantwortung', meaning: 'Responsibility', options: ['A: Power', 'B: Responsibility', 'C: Control', 'D: Obligation'], correct: '🇩' },
+  { word: 'Verhandlung', meaning: 'Negotiation', options: ['A: Discussion', 'B: Contract', 'C: Agreement', 'D: Negotiation'], correct: '🇩' },
+  { word: 'Vorschlag', meaning: 'Suggestion', options: ['A: Request', 'B: Suggestion', 'C: Answer', 'D: Decision'], correct: '🇧' },
+  { word: 'Wert', meaning: 'Value', options: ['A: Price', 'B: Value', 'C: Cost', 'D: Rate'], correct: '🇧' },
+  { word: 'Zustand', meaning: 'Condition', options: ['A: Situation', 'B: Condition', 'C: Stage', 'D: Moment'], correct: '🇧' },
+  { word: 'Zukunft', meaning: 'Future', options: ['A: Past', 'B: Present', 'C: Future', 'D: Now'], correct: '🇩' },
+  { word: 'Ziel', meaning: 'Goal', options: ['A: Target', 'B: Objective', 'C: Goal', 'D: Aim'], correct: '🇩' },
+  { word: 'Zweifel', meaning: 'Doubt', options: ['A: Certainty', 'B: Hesitation', 'C: Question', 'D: Doubt'], correct: '🇩' }
+  ],
+  B2: [
+    { word: 'Abschluss', meaning: 'Conclusion', options: ['A: Start', 'B: Conclusion', 'C: Beginning', 'D: Outcome'], correct: '🇧' },
+  { word: 'Anforderung', meaning: 'Requirement', options: ['A: Suggestion', 'B: Demand', 'C: Requirement', 'D: Request'], correct: '🇩' },
+  { word: 'Auswirkung', meaning: 'Impact', options: ['A: Influence', 'B: Impact', 'C: Effect', 'D: Result'], correct: '🇧' },
+  { word: 'Bedenken', meaning: 'Concern', options: ['A: Doubt', 'B: Question', 'C: Concern', 'D: Fear'], correct: '🇩' },
+  { word: 'Beispiel', meaning: 'Example', options: ['A: Idea', 'B: Model', 'C: Example', 'D: Test'], correct: '🇩' },
+  { word: 'Beschäftigung', meaning: 'Employment', options: ['A: Job', 'B: Work', 'C: Occupation', 'D: Employment'], correct: '🇩' },
+  { word: 'Beteiligung', meaning: 'Participation', options: ['A: Joining', 'B: Participation', 'C: Role', 'D: Effort'], correct: '🇧' },
+  { word: 'Bevollmächtigung', meaning: 'Authorization', options: ['A: Permission', 'B: Authorization', 'C: Power', 'D: Order'], correct: '🇧' },
+  { word: 'Eindruck', meaning: 'Impression', options: ['A: Impact', 'B: Understanding', 'C: Impression', 'D: Reaction'], correct: '🇩' },
+  { word: 'Einfluss', meaning: 'Influence', options: ['A: Control', 'B: Authority', 'C: Influence', 'D: Suggestion'], correct: '🇩' },
+  { word: 'Ergebnis', meaning: 'Result', options: ['A: Beginning', 'B: Process', 'C: Result', 'D: Preparation'], correct: '🇩' },
+  { word: 'Fähigkeit', meaning: 'Ability', options: ['A: Strength', 'B: Knowledge', 'C: Ability', 'D: Talent'], correct: '🇩' },
+  { word: 'Fortschritt', meaning: 'Progress', options: ['A: Development', 'B: Progress', 'C: Improvement', 'D: Change'], correct: '🇧' },
+  { word: 'Gegensätzlich', meaning: 'Contrary', options: ['A: Similar', 'B: Different', 'C: Opposite', 'D: Related'], correct: '🇨' },
+  { word: 'Glaubwürdigkeit', meaning: 'Credibility', options: ['A: Trust', 'B: Reliability', 'C: Authority', 'D: Credibility'], correct: '🇩' },
+  { word: 'Größe', meaning: 'Size', options: ['A: Shape', 'B: Width', 'C: Height', 'D: Size'], correct: '🇩' },
+  { word: 'Herkunft', meaning: 'Origin', options: ['A: Birth', 'B: Heritage', 'C: Origin', 'D: Destination'], correct: '🇩' },
+  { word: 'Individuum', meaning: 'Individual', options: ['A: Group', 'B: Team', 'C: Person', 'D: Individual'], correct: '🇩' },
+  { word: 'Kooperation', meaning: 'Cooperation', options: ['A: Interaction', 'B: Help', 'C: Teamwork', 'D: Cooperation'], correct: '🇩' },
+  { word: 'Kritik', meaning: 'Criticism', options: ['A: Feedback', 'B: Suggestion', 'C: Review', 'D: Criticism'], correct: '🇩' },
+  { word: 'Leistung', meaning: 'Performance', options: ['A: Output', 'B: Effort', 'C: Quality', 'D: Performance'], correct: '🇩' },
+  { word: 'Möglichkeit', meaning: 'Possibility', options: ['A: Opportunity', 'B: Reality', 'C: Chance', 'D: Possibility'], correct: '🇩' },
+  { word: 'Notwendigkeit', meaning: 'Necessity', options: ['A: Requirement', 'B: Choice', 'C: Condition', 'D: Necessity'], correct: '🇩' },
+  { word: 'Qualität', meaning: 'Quality', options: ['A: Quantity', 'B: Amount', 'C: Quality', 'D: Feature'], correct: '🇩' },
+  { word: 'Reaktion', meaning: 'Reaction', options: ['A: Response', 'B: Action', 'C: Reaction', 'D: Response'], correct: '🇩' },
+  { word: 'Ressource', meaning: 'Resource', options: ['A: Asset', 'B: Benefit', 'C: Resource', 'D: Tool'], correct: '🇩' },
+  { word: 'Schwierigkeit', meaning: 'Difficulty', options: ['A: Problem', 'B: Issue', 'C: Difficulty', 'D: Opportunity'], correct: '🇩' },
+  { word: 'Sicherheit', meaning: 'Security', options: ['A: Trust', 'B: Safety', 'C: Protection', 'D: Confidence'], correct: '🇩' },
+  { word: 'Spannung', meaning: 'Tension', options: ['A: Relaxation', 'B: Stress', 'C: Excitement', 'D: Tension'], correct: '🇩' },
+  { word: 'Tatsache', meaning: 'Fact', options: ['A: Truth', 'B: Argument', 'C: Fact', 'D: Story'], correct: '🇩' },
+  { word: 'Verantwortung', meaning: 'Responsibility', options: ['A: Control', 'B: Obligation', 'C: Accountability', 'D: Responsibility'], correct: '🇩' },
+  { word: 'Vorschlag', meaning: 'Proposal', options: ['A: Idea', 'B: Suggestion', 'C: Offer', 'D: Proposal'], correct: '🇩' },
+  { word: 'Zukunft', meaning: 'Future', options: ['A: Now', 'B: Past', 'C: Present', 'D: Future'], correct: '🇩' },
+  { word: 'Zusammenhang', meaning: 'Context', options: ['A: Reason', 'B: Conclusion', 'C: Context', 'D: Situation'], correct: '🇩' },
+  { word: 'Zufriedenheit', meaning: 'Satisfaction', options: ['A: Joy', 'B: Contentment', 'C: Happiness', 'D: Satisfaction'], correct: '🇩' },
+  { word: 'Zweifel', meaning: 'Doubt', options: ['A: Certainty', 'B: Question', 'C: Doubt', 'D: Agreement'], correct: '🇩' },
+  { word: 'Zugang', meaning: 'Access', options: ['A: Entrance', 'B: Connection', 'C: Access', 'D: Admission'], correct: '🇩' },
+  { word: 'Abneigung', meaning: 'Dislike', options: ['A: Attraction', 'B: Dislike', 'C: Preference', 'D: Respect'], correct: '🇧' },
+  { word: 'Aussicht', meaning: 'View', options: ['A: Prospect', 'B: Sight', 'C: Image', 'D: View'], correct: '🇩' },
+  { word: 'Einstellung', meaning: 'Position', options: ['A: View', 'B: Approach', 'C:Position', 'D: Opinion'], correct: '🇩' },
+  { word: 'Erlaubnis', meaning: 'Permission', options: ['A: Consent', 'B: Permission', 'C: Grant', 'D: Request'], correct: '🇩' },
+  { word: 'Herausforderung', meaning: 'Challenge', options: ['A: Task', 'B: Issue', 'C: Difficulty', 'D: Challenge'], correct: '🇩' },
+  { word: 'Lösungsweg', meaning: 'Solution', options: ['A: Plan', 'B: Answer', 'C: Strategy', 'D: Solution'], correct: '🇩' },
+  { word: 'Nachhaltigkeit', meaning: 'Sustainability', options: ['A: Change', 'B: Conservation', 'C: Continuation', 'D: Sustainability'], correct: '🇩' },
+  { word: 'Unterschied', meaning: 'Difference', options: ['A: Similarity', 'B: Difference', 'C: Variation', 'D: Divergence'], correct: '🇩' },
+  { word: 'Verhältnis', meaning: 'Relation', options: ['A: Ratio', 'B: Comparison', 'C: Relationship', 'D: Value'], correct: '🇩' },
+  { word: 'Verantwortung', meaning: 'Responsibility', options: ['A: Role', 'B: Duty', 'C: Task', 'D: Responsibility'], correct: '🇩' },
+  { word: 'Verschwendung', meaning: 'Waste', options: ['A: Loss', 'B: Waste', 'C: Use', 'D: Expense'], correct: '🇩' },
+  { word: 'Wachstum', meaning: 'Growth', options: ['A: Change', 'B: Expansion', 'C: Increase', 'D: Growth'], correct: '🇩' },
+  { word: 'Zerstörung', meaning: 'Destruction', options: ['A: Build', 'B: Damage', 'C: Destruction', 'D: Repair'], correct: '🇩' },
+  { word: 'Zusammenarbeit', meaning: 'Collaboration', options: ['A: Group', 'B: Cooperation', 'C: Teamwork', 'D: Collaboration'], correct: '🇩' },
+  { word: 'Zufall', meaning: 'Chance', options: ['A: Coincidence', 'B: Event', 'C: Luck', 'D: Chance'], correct: '🇩' },
+  { word: 'Zukunftsperspektive', meaning: 'Future perspective', options: ['A: Vision', 'B: Option', 'C: Outlook', 'D: Perspective'], correct: '🇩' },
+  { word: 'Zustand', meaning: 'State', options: ['A: Situation', 'B: Condition', 'C: Position', 'D: State'], correct: '🇩' }
+  ],
+  C1: [
+    { word: 'Abstraktion', meaning: 'Abstraction', options: ['A: Explanation', 'B: Simplification', 'C: Generalization', 'D: Abstraction'], correct: '🇩' },
+  { word: 'Angemessenheit', meaning: 'Appropriateness', options: ['A: Fit', 'B: Relevance', 'C: Suitability', 'D: Appropriateness'], correct: '🇩' },
+  { word: 'Anpassungsfähigkeit', meaning: 'Adaptability', options: ['A: Flexibility', 'B: Change', 'C: Stability', 'D: Adaptability'], correct: '🇩' },
+  { word: 'Aufgeschlossenheit', meaning: 'Open-mindedness', options: ['A: Receptiveness', 'B: Tolerance', 'C: Broadmindedness', 'D: Open-mindedness'], correct: '🇩' },
+  { word: 'Ausgewogenheit', meaning: 'Balance', options: ['A: Moderation', 'B: Proportion', 'C: Fairness', 'D: Balance'], correct: '🇩' },
+  { word: 'Bedeutungslosigkeit', meaning: 'Insignificance', options: ['A: Unimportance', 'B: Meaninglessness', 'C: Inconsequence', 'D: Insignificance'], correct: '🇩' },
+  { word: 'Begeisterung', meaning: 'Enthusiasm', options: ['A: Passion', 'B: Excitement', 'C: Zeal', 'D: Enthusiasm'], correct: '🇩' },
+  { word: 'Beständigkeit', meaning: 'Consistency', options: ['A: Regularity', 'B: Stability', 'C: Dependability', 'D: Consistency'], correct: '🇩' },
+  { word: 'Differenzierung', meaning: 'Differentiation', options: ['A: Contrast', 'B: Separation', 'C: Diversity', 'D: Differentiation'], correct: '🇩' },
+  { word: 'Entschlossenheit', meaning: 'Determination', options: ['A: Willpower', 'B: Resolution', 'C: Steadfastness', 'D: Determination'], correct: '🇩' },
+  { word: 'Erklärung', meaning: 'Clarification', options: ['A: Explanation', 'B: Argument', 'C: Justification', 'D: Clarification'], correct: '🇩' },
+  { word: 'Erfahrung', meaning: 'Experience', options: ['A: Knowledge', 'B: Practice', 'C: Encounter', 'D: Experience'], correct: '🇩' },
+  { word: 'Fähigkeit', meaning: 'Competence', options: ['A: Skill', 'B: Ability', 'C: Capability', 'D: Competence'], correct: '🇩' },
+  { word: 'Fortschrittlichkeit', meaning: 'Progressiveness', options: ['A: Innovation', 'B: Openness', 'C: Advancement', 'D: Progressiveness'], correct: '🇩' },
+  { word: 'Freundlichkeit', meaning: 'Kindness', options: ['A: Gentleness', 'B: Compassion', 'C: Friendliness', 'D: Kindness'], correct: '🇩' },
+  { word: 'Freiheit', meaning: 'Freedom', options: ['A: Liberty', 'B: Independence', 'C: Autonomy', 'D: Freedom'], correct: '🇩' },
+  { word: 'Generosität', meaning: 'Generosity', options: ['A: Altruism', 'B: Giving', 'C: Magnanimity', 'D: Generosity'], correct: '🇩' },
+  { word: 'Gesellschaft', meaning: 'Society', options: ['A: Group', 'B: Public', 'C: Community', 'D: Society'], correct: '🇩' },
+  { word: 'Komplexität', meaning: 'Complexity', options: ['A: Intricacy', 'B: Difficulty', 'C: Complication', 'D: Complexity'], correct: '🇩' },
+  { word: 'Konsistenz', meaning: 'Consistency', options: ['A: Regularity', 'B: Cohesion', 'C: Stability', 'D: Consistency'], correct: '🇩' },
+  { word: 'Kritikfähigkeit', meaning: 'Criticism', options: ['A: Judgment', 'B: Reflection', 'C: Sensitivity', 'D: Criticism'], correct: '🇩' },
+  { word: 'Lebensqualität', meaning: 'Quality of life', options: ['A: Prosperity', 'B: Well-being', 'C: Comfort', 'D: Quality of life'], correct: '🇩' },
+  { word: 'Nachhaltigkeit', meaning: 'Sustainability', options: ['A: Eco-friendliness', 'B: Durability', 'C: Responsibility', 'D: Sustainability'], correct: '🇩' },
+  { word: 'Optimierung', meaning: 'Optimization', options: ['A: Improvement', 'B: Refinement', 'C: Enhancement', 'D: Optimization'], correct: '🇩' },
+  { word: 'Präzision', meaning: 'Precision', options: ['A: Exactness', 'B: Accuracy', 'C: Specificity', 'D: Precision'], correct: '🇩' },
+  { word: 'Reflexion', meaning: 'Reflection', options: ['A: Review', 'B: Meditation', 'C: Thought', 'D: Reflection'], correct: '🇩' },
+  { word: 'Respekt', meaning: 'Respect', options: ['A: Honor', 'B: Courtesy', 'C: Regard', 'D: Respect'], correct: '🇩' },
+  { word: 'Sicherheit', meaning: 'Security', options: ['A: Safety', 'B: Protection', 'C: Assurance', 'D: Security'], correct: '🇩' },
+  { word: 'Souveränität', meaning: 'Sovereignty', options: ['A: Authority', 'B: Control', 'C: Supremacy', 'D: Sovereignty'], correct: '🇩' },
+  { word: 'Spontaneität', meaning: 'Spontaneity', options: ['A: Impulse', 'B: Freedom', 'C: Instinct', 'D: Spontaneity'], correct: '🇩' },
+  { word: 'Toleranz', meaning: 'Tolerance', options: ['A: Patience', 'B: Openness', 'C: Acceptance', 'D: Tolerance'], correct: '🇩' },
+  { word: 'Transparenz', meaning: 'Transparency', options: ['A: Clarity', 'B: Openness', 'C: Insight', 'D: Transparency'], correct: '🇩' },
+  { word: 'Verantwortung', meaning: 'Responsibility', options: ['A: Obligation', 'B: Accountability', 'C: Duty', 'D: Responsibility'], correct: '🇩' },
+  { word: 'Verlässlichkeit', meaning: 'Reliability', options: ['A: Dependability', 'B: Trustworthiness', 'C: Steadiness', 'D: Reliability'], correct: '🇩' },
+  { word: 'Vertrauen', meaning: 'Trust', options: ['A: Confidence', 'B: Belief', 'C: Faith', 'D: Trust'], correct: '🇩' },
+  { word: 'Verstehen', meaning: 'Comprehension', options: ['A: Recognition', 'B: Insight', 'C: Understanding', 'D: Perception'], correct: '🇩' },
+  { word: 'Verzahnung', meaning: 'Interconnection', options: ['A: Integration', 'B: Relationship', 'C: Linkage', 'D: Interconnection'], correct: '🇩' },
+  { word: 'Vorbereitung', meaning: 'Preparation', options: ['A: Setup', 'B: Training', 'C: Planning', 'D: Preparation'], correct: '🇩' },
+  { word: 'Wahrnehmung', meaning: 'Perception', options: ['A: View', 'B: Interpretation', 'C: Insight', 'D: Perception'], correct: '🇩' },
+  { word: 'Wertschätzung', meaning: 'Appreciation', options: ['A: Acknowledgment', 'B: Recognition', 'C: Value', 'D: Appreciation'], correct: '🇩' },
+  { word: 'Wissenschaftlichkeit', meaning: 'Scientific approach', options: ['A: Research', 'B: Knowledge', 'C: Methodology', 'D: Scientific approach'], correct: '🇩' },
+  { word: 'Zuverlässigkeit', meaning: 'Reliability', options: ['A: Certainty', 'B: Trustworthiness', 'C: Consistency', 'D: Reliability'], correct: '🇩' },
+  { word: 'Zielstrebigkeit', meaning: 'Determination', options: ['A: Dedication', 'B: Resolve', 'C: Focus', 'D: Determination'], correct: '🇩' },
+  { word: 'Zusammenarbeit', meaning: 'Collaboration', options: ['A: Teamwork', 'B: Cooperation', 'C: Collaboration', 'D: Partnership'], correct: '🇩' },
+  { word: 'Zweckmäßigkeit', meaning: 'Purposefulness', options: ['A: Effectiveness', 'B: Relevance', 'C: Suitability', 'D: Purposefulness'], correct: '🇩' },
+  { word: 'Zustimmung', meaning: 'Approval', options: ['A: Consent', 'B: Agreement', 'C: Affirmation', 'D: Approval'], correct: '🇩' },
+  { word: 'Zweifel', meaning: 'Doubt', options: ['A: Certainty', 'B: Uncertainty', 'C: Skepticism', 'D: Doubt'], correct: '🇩' }
+  ],
+  C2: [
+    { word: 'Abgleich', meaning: 'Comparison', options: ['A: Harmony', 'B: Coordination', 'C: Adjustment', 'D: Comparison'], correct: '🇩' },
+  { word: 'Abstraktionsvermögen', meaning: 'Ability to abstract', options: ['A: Logical thinking', 'B: Conceptualization', 'C: Deduction', 'D: Ability to abstract'], correct: '🇩' },
+  { word: 'Allgemeingültigkeit', meaning: 'Universality', options: ['A: Generalization', 'B: Global applicability', 'C: Universality', 'D: Validity'], correct: '🇩' },
+  { word: 'Amortisation', meaning: 'Amortization', options: ['A: Payback', 'B: Return', 'C: Reimbursement', 'D: Amortization'], correct: '🇩' },
+  { word: 'Antizipation', meaning: 'Anticipation', options: ['A: Forecast', 'B: Prediction', 'C: Expectation', 'D: Anticipation'], correct: '🇩' },
+  { word: 'Argumentationsfähigkeit', meaning: 'Argumentation skill', options: ['A: Persuasiveness', 'B: Rhetoric', 'C: Discussion ability', 'D: Argumentation skill'], correct: '🇩' },
+  { word: 'Assoziation', meaning: 'Association', options: ['A: Relation', 'B: Connection', 'C: Link', 'D: Association'], correct: '🇩' },
+  { word: 'Authentizität', meaning: 'Authenticity', options: ['A: Genuineness', 'B: Truth', 'C: Originality', 'D: Authenticity'], correct: '🇩' },
+  { word: 'Berechenbarkeit', meaning: 'Predictability', options: ['A: Reliability', 'B: Expectability', 'C: Measurability', 'D: Predictability'], correct: '🇩' },
+  { word: 'Differenzierung', meaning: 'Differentiation', options: ['A: Distinction', 'B: Segmentation', 'C: Classification', 'D: Differentiation'], correct: '🇩' },
+  { word: 'Disziplin', meaning: 'Discipline', options: ['A: Orderliness', 'B: Control', 'C: Commitment', 'D: Discipline'], correct: '🇩' },
+  { word: 'Erkennbarkeit', meaning: 'Recognizability', options: ['A: Visibility', 'B: Distinguishability', 'C: Clarity', 'D: Recognizability'], correct: '🇩' },
+  { word: 'Ernsthaftigkeit', meaning: 'Seriousness', options: ['A: Gravity', 'B: Solemnity', 'C: Sincerity', 'D: Seriousness'], correct: '🇩' },
+  { word: 'Exaktheit', meaning: 'Precision', options: ['A: Exactness', 'B: Rigidity', 'C: Carefulness', 'D: Precision'], correct: '🇩' },
+  { word: 'Fähigkeitsanalyse', meaning: 'Skills analysis', options: ['A: Evaluation', 'B: Competency check', 'C: Capacity review', 'D: Skills analysis'], correct: '🇩' },
+  { word: 'Flüssigkeit', meaning: 'Fluency', options: ['A: Ease', 'B: Smoothness', 'C: Flow', 'D: Fluency'], correct: '🇩' },
+  { word: 'Gegenseitigkeit', meaning: 'Reciprocity', options: ['A: Symmetry', 'B: Exchange', 'C: Mutuality', 'D: Reciprocity'], correct: '🇩' },
+  { word: 'Gegensatz', meaning: 'Contradiction', options: ['A: Contrast', 'B: Disagreement', 'C: Discrepancy', 'D: Contradiction'], correct: '🇩' },
+  { word: 'Intuition', meaning: 'Intuition', options: ['A: Instinct', 'B: Insight', 'C: Perception', 'D: Intuition'], correct: '🇩' },
+  { word: 'Konformität', meaning: 'Conformity', options: ['A: Agreement', 'B: Compliance', 'C: Adherence', 'D: Conformity'], correct: '🇩' },
+  { word: 'Komplexität', meaning: 'Complexity', options: ['A: Intricacy', 'B: Difficulty', 'C: Entanglement', 'D: Complexity'], correct: '🇩' },
+  { word: 'Korrektheit', meaning: 'Correctness', options: ['A: Rightness', 'B: Exactness', 'C: Accuracy', 'D: Correctness'], correct: '🇩' },
+  { word: 'Kritikfähigkeit', meaning: 'Criticism capability', options: ['A: Review ability', 'B: Reflection', 'C: Analytical skill', 'D: Criticism capability'], correct: '🇩' },
+  { word: 'Kultiviertheit', meaning: 'Cultivation', options: ['A: Refinement', 'B: Development', 'C: Culture', 'D: Cultivation'], correct: '🇩' },
+  { word: 'Kompetenz', meaning: 'Competence', options: ['A: Expertise', 'B: Proficiency', 'C: Knowledge', 'D: Competence'], correct: '🇩' },
+  { word: 'Loyalität', meaning: 'Loyalty', options: ['A: Allegiance', 'B: Faithfulness', 'C: Devotion', 'D: Loyalty'], correct: '🇩' },
+  { word: 'Mangelware', meaning: 'Scarcity', options: ['A: Deficiency', 'B: Shortage', 'C: Deprivation', 'D: Scarcity'], correct: '🇩' },
+  { word: 'Mobilität', meaning: 'Mobility', options: ['A: Flexibility', 'B: Motion', 'C: Mobility', 'D: Fluidity'], correct: '🇩' },
+  { word: 'Modulation', meaning: 'Modulation', options: ['A: Control', 'B: Adjustment', 'C: Balance', 'D: Modulation'], correct: '🇩' },
+  { word: 'Neutralität', meaning: 'Neutrality', options: ['A: Impartiality', 'B: Indifference', 'C: Objectivity', 'D: Neutrality'], correct: '🇩' },
+  { word: 'Nachhaltigkeit', meaning: 'Sustainability', options: ['A: Durability', 'B: Eco-friendliness', 'C: Long-lasting', 'D: Sustainability'], correct: '🇩' },
+  { word: 'Originalität', meaning: 'Originality', options: ['A: Uniqueness', 'B: Creativity', 'C: Novelty', 'D: Originality'], correct: '🇩' },
+  { word: 'Permanenz', meaning: 'Permanence', options: ['A: Continuity', 'B: Stability', 'C: Durability', 'D: Permanence'], correct: '🇩' },
+  { word: 'Priorität', meaning: 'Priority', options: ['A: Importance', 'B: Urgency', 'C: Preference', 'D: Priority'], correct: '🇩' },
+  { word: 'Rationalität', meaning: 'Rationality', options: ['A: Reason', 'B: Logic', 'C: Sensibility', 'D: Rationality'], correct: '🇩' },
+  { word: 'Skepsis', meaning: 'Skepticism', options: ['A: Doubt', 'B: Caution', 'C: Disbelief', 'D: Skepticism'], correct: '🇩' },
+  { word: 'Sensibilität', meaning: 'Sensitivity', options: ['A: Awareness', 'B: Compassion', 'C: Sensitivity', 'D: Responsiveness'], correct: '🇩' },
+  { word: 'Subtilität', meaning: 'Subtlety', options: ['A: Fineness', 'B: Delicacy', 'C: Refinement', 'D: Subtlety'], correct: '🇩' },
+  { word: 'Synergie', meaning: 'Synergy', options: ['A: Cooperation', 'B: Efficiency', 'C: Interaction', 'D: Synergy'], correct: '🇩' },
+  { word: 'Toleranz', meaning: 'Tolerance', options: ['A: Acceptance', 'B: Patience', 'C: Openness', 'D: Tolerance'], correct: '🇩' },
+  { word: 'Tranzparenz', meaning: 'Transparency', options: ['A: Openness', 'B: Clarity', 'C: Disclosure', 'D: Transparency'], correct: '🇩' },
+  { word: 'Universalisierung', meaning: 'Universalization', options: ['A: Globalization', 'B: Unification', 'C: Standardization', 'D: Universalization'], correct: '🇩' },
+  { word: 'Verlässlichkeit', meaning: 'Reliability', options: ['A: Dependability', 'B: Trustworthiness', 'C: Consistency', 'D: Reliability'], correct: '🇩' },
+  { word: 'Vernunft', meaning: 'Reason', options: ['A: Wisdom', 'B: Understanding', 'C: Logic', 'D: Reason'], correct: '🇩' },
+  { word: 'Vertrauen', meaning: 'Trust', options: ['A: Confidence', 'B: Belief', 'C:Assurance', 'D: Trust'], correct: '🇩' },
+  { word: 'Wahrnehmung', meaning: 'Perception', options: ['A: Sensibility', 'B: Awareness', 'C: Recognition', 'D: Perception'], correct: '🇩' },
+  { word: 'Wissenschaftlichkeit', meaning: 'Scientific methodology', options: ['A: Research', 'B: Study', 'C: Examination', 'D: Scientific methodology'], correct: '🇩' },
+  { word: 'Zielstrebigkeit', meaning: 'Determination', options: ['A: Focus', 'B: Persistence', 'C: Dedication', 'D: Goal orientation'], correct: '🇩' }
+  ],
+}; 
+
+// Word of the Day data
+const wordList = [
+  { word: 'die Stadt', meaning: 'City', plural: 'die Städte', indefinite: 'eine Stadt', definite: 'die Stadt' },
+  { word: 'der Apfel', meaning: 'An Apple', plural: 'die Äpfel', indefinite: 'ein Apfel', definite: 'der Apfel' },
+  { word: 'das Buch', meaning: 'A Book', plural: 'die Bücher', indefinite: 'ein Buch', definite: 'das Buch' },
+  { word: 'die Blume', meaning: 'Flower', plural: 'die Blumen', indefinite: 'eine Blume', definite: 'die Blume' },
+  { word: 'der Hund', meaning: 'Dog', plural: 'die Hunde', indefinite: 'ein Hund', definite: 'der Hund' },
+  { word: 'die Katze', meaning: 'Cat', plural: 'die Katzen', indefinite: 'eine Katze', definite: 'die Katze' },
+  { word: 'das Haus', meaning: 'House', plural: 'die Häuser', indefinite: 'ein Haus', definite: 'das Haus' },
+  { word: 'die Schule', meaning: 'School', plural: 'die Schulen', indefinite: 'eine Schule', definite: 'die Schule' },
+  { word: 'der Tisch', meaning: 'Table', plural: 'die Tische', indefinite: 'ein Tisch', definite: 'der Tisch' },
+  { word: 'die Lampe', meaning: 'Lamp', plural: 'die Lampen', indefinite: 'eine Lampe', definite: 'die Lampe' },
+  { word: 'das Auto', meaning: 'Car', plural: 'die Autos', indefinite: 'ein Auto', definite: 'das Auto' },
+  { word: 'die Tasche', meaning: 'Bag', plural: 'die Taschen', indefinite: 'eine Tasche', definite: 'die Tasche' },
+  { word: 'der Stuhl', meaning: 'Chair', plural: 'die Stühle', indefinite: 'ein Stuhl', definite: 'der Stuhl' },
+  { word: 'das Fenster', meaning: 'Window', plural: 'die Fenster', indefinite: 'ein Fenster', definite: 'das Fenster' },
+  { word: 'die Wand', meaning: 'Wall', plural: 'die Wände', indefinite: 'eine Wand', definite: 'die Wand' },
+  { word: 'die Tür', meaning: 'Door', plural: 'die Türen', indefinite: 'eine Tür', definite: 'die Tür' },
+  { word: 'der Lehrer', meaning: 'Teacher (Male)', plural: 'die Lehrer', indefinite: 'ein Lehrer', definite: 'der Lehrer' },
+  { word: 'die Lehrerin', meaning: 'Teacher (Female)', plural: 'die Lehrerinnen', indefinite: 'eine Lehrerin', definite: 'die Lehrerin' },
+  { word: 'die Zeit', meaning: 'Time', plural: 'die Zeiten', indefinite: 'eine Zeit', definite: 'die Zeit' },
+  { word: 'das Wasser', meaning: 'Water', plural: 'die Wasser', indefinite: 'ein Wasser', definite: 'das Wasser' },
+  { word: 'der Tag', meaning: 'Day', plural: 'die Tage', indefinite: 'ein Tag', definite: 'der Tag' },
+  { word: 'die Nacht', meaning: 'Night', plural: 'die Nächte', indefinite: 'eine Nacht', definite: 'die Nacht' },
+  { word: 'der Monat', meaning: 'Month', plural: 'die Monate', indefinite: 'ein Monat', definite: 'der Monat' },
+  { word: 'das Jahr', meaning: 'Year', plural: 'die Jahre', indefinite: 'ein Jahr', definite: 'das Jahr' },
+  { word: 'der Freund', meaning: 'Friend (Male)', plural: 'die Freunde', indefinite: 'ein Freund', definite: 'der Freund' },
+  { word: 'die Freundin', meaning: 'Friend (Female)', plural: 'die Freundinnen', indefinite: 'eine Freundin', definite: 'die Freundin' },
+  { word: 'der Apfelbaum', meaning: 'Apple Tree', plural: 'die Apfelbäume', indefinite: 'ein Apfelbaum', definite: 'der Apfelbaum' },
+  { word: 'das Schwein', meaning: 'Pig', plural: 'die Schweine', indefinite: 'ein Schwein', definite: 'das Schwein' },
+  { word: 'der Vogel', meaning: 'Bird', plural: 'die Vögel', indefinite: 'ein Vogel', definite: 'der Vogel' },
+  { word: 'die Maus', meaning: 'Mouse', plural: 'die Mäuse', indefinite: 'eine Maus', definite: 'die Maus' },
+  { word: 'das Pferd', meaning: 'Horse', plural: 'die Pferde', indefinite: 'ein Pferd', definite: 'das Pferd' },
+  { word: 'die Gabel', meaning: 'Fork', plural: 'die Gabeln', indefinite: 'eine Gabel', definite: 'die Gabel' },
+  { word: 'das Messer', meaning: 'Knife', plural: 'die Messer', indefinite: 'ein Messer', definite: 'das Messer' },
+  { word: 'der Löffel', meaning: 'Spoon', plural: 'die Löffel', indefinite: 'ein Löffel', definite: 'der Löffel' },
+  { word: 'das Glas', meaning: 'Glass', plural: 'die Gläser', indefinite: 'ein Glas', definite: 'das Glas' },
+  { word: 'die Tasse', meaning: 'Cup', plural: 'die Tassen', indefinite: 'eine Tasse', definite: 'die Tasse' },
+  { word: 'der Teller', meaning: 'Plate', plural: 'die Teller', indefinite: 'ein Teller', definite: 'der Teller' },
+  { word: 'die Gießkanne', meaning: 'Watering Can', plural: 'die Gießkannen', indefinite: 'eine Gießkanne', definite: 'die Gießkanne' },
+  { word: 'das Kissen', meaning: 'Pillow', plural: 'die Kissen', indefinite: 'ein Kissen', definite: 'das Kissen' },
+  { word: 'der Teppich', meaning: 'Carpet', plural: 'die Teppiche', indefinite: 'ein Teppich', definite: 'der Teppich' },
+  { word: 'der Bildschirm', meaning: 'Screen', plural: 'die Bildschirme', indefinite: 'ein Bildschirm', definite: 'der Bildschirm' },
+  { word: 'die Batterie', meaning: 'Battery', plural: 'die Batterien', indefinite: 'eine Batterie', definite: 'die Batterie' },  { word: 'das Telefon', meaning: 'Phone', plural: 'die Telefone', indefinite: 'ein Telefon', definite: 'das Telefon' },
+  { word: 'die Maus', meaning: 'Mouse', plural: 'die Mäuse', indefinite: 'eine Maus', definite: 'die Maus' },
+  { word: 'der Computer', meaning: 'Computer', plural: 'die Computer', indefinite: 'ein Computer', definite: 'der Computer' },
+  { word: 'das Papier', meaning: 'Paper', plural: 'die Papiere', indefinite: 'ein Papier', definite: 'das Papier' },
+  { word: 'der Stift', meaning: 'Pen', plural: 'die Stifte', indefinite: 'ein Stift', definite: 'der Stift' },
+  { word: 'das Heft', meaning: 'Notebook', plural: 'die Hefte', indefinite: 'ein Heft', definite: 'das Heft' },
+  { word: 'der Bleistift', meaning: 'Pencil', plural: 'die Bleistifte', indefinite: 'ein Bleistift', definite: 'der Bleistift' },
+  { word: 'die Uhr', meaning: 'Clock', plural: 'die Uhren', indefinite: 'eine Uhr', definite: 'die Uhr' },
+  { word: 'der Schreibtisch', meaning: 'Desk', plural: 'die Schreibtische', indefinite: 'ein Schreibtisch', definite: 'der Schreibtisch' },
+  { word: 'die Decke', meaning: 'Ceiling', plural: 'die Decken', indefinite: 'eine Decke', definite: 'die Decke' },
+  { word: 'der Boden', meaning: 'Floor', plural: 'die Böden', indefinite: 'ein Boden', definite: 'der Boden' },
+  { word: 'der Raum', meaning: 'Room', plural: 'die Räume', indefinite: 'ein Raum', definite: 'der Raum' },
+  { word: 'die Ecke', meaning: 'Corner', plural: 'die Ecken', indefinite: 'eine Ecke', definite: 'die Ecke' },
+  { word: 'der Platz', meaning: 'Place', plural: 'die Plätze', indefinite: 'ein Platz', definite: 'der Platz' },
+  { word: 'das Geschäft', meaning: 'Store', plural: 'die Geschäfte', indefinite: 'ein Geschäft', definite: 'das Geschäft' },
+  { word: 'der Park', meaning: 'Park', plural: 'die Parks', indefinite: 'ein Park', definite: 'der Park' },
+  { word: 'die Bibliothek', meaning: 'Library', plural: 'die Bibliotheken', indefinite: 'eine Bibliothek', definite: 'die Bibliothek' },
+  { word: 'der Fluss', meaning: 'River', plural: 'die Flüsse', indefinite: 'ein Fluss', definite: 'der Fluss' },
+  { word: 'der See', meaning: 'Lake', plural: 'die Seen', indefinite: 'ein See', definite: 'der See' },
+  { word: 'das Meer', meaning: 'Sea', plural: 'die Meere', indefinite: 'ein Meer', definite: 'das Meer' },
+  { word: 'der Himmel', meaning: 'Sky', plural: 'die Himmel', indefinite: 'ein Himmel', definite: 'der Himmel' },
+  { word: 'die Wolke', meaning: 'Cloud', plural: 'die Wolken', indefinite: 'eine Wolke', definite: 'die Wolke' },
+  { word: 'der Regen', meaning: 'Rain', plural: 'die Regen', indefinite: 'ein Regen', definite: 'der Regen' },
+  { word: 'die Sonne', meaning: 'Sun', plural: 'die Sonnen', indefinite: 'eine Sonne', definite: 'die Sonne' },
+  { word: 'der Wind', meaning: 'Wind', plural: 'die Winde', indefinite: 'ein Wind', definite: 'der Wind' },
+  { word: 'das Feuer', meaning: 'Fire', plural: 'die Feuer', indefinite: 'ein Feuer', definite: 'das Feuer' },
+  { word: 'der Schnee', meaning: 'Snow', plural: 'die Schneen', indefinite: 'ein Schnee', definite: 'der Schnee' },
+  { word: 'die Erde', meaning: 'Earth', plural: 'die Erden', indefinite: 'eine Erde', definite: 'die Erde' },
+  { word: 'der Berg', meaning: 'Mountain', plural: 'die Berge', indefinite: 'ein Berg', definite: 'der Berg' },
+  { word: 'die Insel', meaning: 'Island', plural: 'die Inseln', indefinite: 'eine Insel', definite: 'die Insel' },
+  { word: 'das Tal', meaning: 'Valley', plural: 'die Täler', indefinite: 'ein Tal', definite: 'das Tal' },
+  { word: 'die Wüste', meaning: 'Desert', plural: 'die Wüsten', indefinite: 'eine Wüste', definite: 'die Wüste' },
+  { word: 'der Wald', meaning: 'Forest', plural: 'die Wälder', indefinite: 'ein Wald', definite: 'der Wald' },
+  { word: 'das Gebirge', meaning: 'Mountain Range', plural: 'die Gebirge', indefinite: 'ein Gebirge', definite: 'das Gebirge' },
+  { word: 'der Ozean', meaning: 'Ocean', plural: 'die Ozeane', indefinite: 'ein Ozean', definite: 'der Ozean' },
+  { word: 'die Mütze', meaning: 'Hat', plural: 'die Mützen', indefinite: 'eine Mütze', definite: 'die Mütze' },
+  { word: 'der Schuh', meaning: 'Shoe', plural: 'die Schuhe', indefinite: 'ein Schuh', definite: 'der Schuh' },
+  { word: 'das Hemd', meaning: 'Shirt', plural: 'die Hemden', indefinite: 'ein Hemd', definite: 'das Hemd' },
+  { word: 'die Jacke', meaning: 'Jacket', plural: 'die Jacken', indefinite: 'eine Jacke', definite: 'die Jacke' },
+  { word: 'der Mantel', meaning: 'Coat', plural: 'die Mäntel', indefinite: 'ein Mantel', definite: 'der Mantel' },
+  { word: 'das Kleid', meaning: 'Dress', plural: 'die Kleider', indefinite: 'ein Kleid', definite: 'das Kleid' },
+  { word: 'die Hose', meaning: 'Pants', plural: 'die Hosen', indefinite: 'eine Hose', definite: 'die Hose' },
+  { word: 'der Rock', meaning: 'Skirt', plural: 'die Röcke', indefinite: 'ein Rock', definite: 'der Rock' },
+  { word: 'das T-Shirt', meaning: 'T-shirt', plural: 'die T-Shirts', indefinite: 'ein T-Shirt', definite: 'das T-Shirt' },
+  { word: 'die Brille', meaning: 'Glasses', plural: 'die Brillen', indefinite: 'eine Brille', definite: 'die Brille' },
+  { word: 'der Hut', meaning: 'Hat', plural: 'die Hüte', indefinite: 'ein Hut', definite: 'der Hut' },
+  { word: 'das Kleidungsstück', meaning: 'Clothing', plural: 'die Kleidungsstücke', indefinite: 'ein Kleidungsstück', definite: 'das Kleidungsstück' },
+  { word: 'die Socken', meaning: 'Socks', plural: 'die Socken', indefinite: 'Socken', definite: 'die Socken' },
+  { word: 'der Handschuh', meaning: 'Glove', plural: 'die Handschuhe', indefinite: 'ein Handschuh', definite: 'der Handschuh' },
+  { word: 'die Tasche', meaning: 'Bag', plural: 'die Taschen', indefinite: 'eine Tasche', definite: 'die Tasche' },
+  { word: 'das Portemonnaie', meaning: 'Wallet', plural: 'die Portemonnaies', indefinite: 'ein Portemonnaie', definite: 'das Portemonnaie' },
+  { word: 'der Rucksack', meaning: 'Backpack', plural: 'die Rucksäcke', indefinite: 'ein Rucksack', definite: 'der Rucksack' },
+  { word: 'die Kette', meaning: 'Necklace', plural: 'die Ketten', indefinite: 'eine Kette', definite: 'die Kette' },
+  { word: 'der Ring', meaning: 'Ring', plural: 'die Ringe', indefinite: 'ein Ring', definite: 'der Ring' },
+  { word: 'das Armband', meaning: 'Bracelet', plural: 'die Armbänder', indefinite: 'ein Armband', definite: 'das Armband' },
+  { word: 'die Uhr', meaning: 'Watch', plural: 'die Uhren', indefinite: 'eine Uhr', definite: 'die Uhr' },
+  { word: 'der Schlüssel', meaning: 'Key', plural: 'die Schlüssel', indefinite: 'ein Schlüssel', definite: 'der Schlüssel' },
+  { word: 'das Schloss', meaning: 'Lock', plural: 'die Schlösser', indefinite: 'ein Schloss', definite: 'das Schloss' },
+  { word: 'der Brief', meaning: 'Letter', plural: 'die Briefe', indefinite: 'ein Brief', definite: 'der Brief' },
+  { word: 'die Post', meaning: 'Post', plural: 'die Post', indefinite: 'Post', definite: 'die Post' },
+  { word: 'das Paket', meaning: 'Package', plural: 'die Pakete', indefinite: 'ein Paket', definite: 'das Paket' },
+  { word: 'der Briefumschlag', meaning:'Envelope', plural: 'die Briefumschläge', indefinite: 'ein Briefumschlag', definite: 'der Briefumschlag' },
+  { word: 'die Karte', meaning: 'Card', plural: 'die Karten', indefinite: 'eine Karte', definite: 'die Karte' },
+  { word: 'der Stempel', meaning: 'Stamp', plural: 'die Stempel', indefinite: 'ein Stempel', definite: 'der Stempel' },
+  { word: 'das Telefon', meaning: 'Phone', plural: 'die Telefone', indefinite: 'ein Telefon', definite: 'das Telefon' },
+  { word: 'die Nachricht', meaning: 'Message', plural: 'die Nachrichten', indefinite: 'eine Nachricht', definite: 'die Nachricht' },
+  { word: 'der Anruf', meaning: 'Call', plural: 'die Anrufe', indefinite: 'ein Anruf', definite: 'der Anruf' },
+  { word: 'das Fax', meaning: 'Fax', plural: 'die Faxe', indefinite: 'ein Fax', definite: 'das Fax' },
+  { word: 'die E-Mail', meaning: 'Email', plural: 'die E-Mails', indefinite: 'eine E-Mail', definite: 'die E-Mail' },
+  { word: 'der Computer', meaning: 'Computer', plural: 'die Computer', indefinite: 'ein Computer', definite: 'der Computer' },
+  { word: 'das Internet', meaning: 'Internet', plural: 'die Internets', indefinite: 'ein Internet', definite: 'das Internet' },
+  { word: 'die Website', meaning: 'Website', plural: 'die Websites', indefinite: 'eine Website', definite: 'die Website' },
+  { word: 'der Bildschirm', meaning: 'Screen', plural: 'die Bildschirme', indefinite: 'ein Bildschirm', definite: 'der Bildschirm' },
+  { word: 'das Kabel', meaning: 'Cable', plural: 'die Kabel', indefinite: 'ein Kabel', definite: 'das Kabel' },
+  { word: 'die Maus', meaning: 'Mouse', plural: 'die Mäuse', indefinite: 'eine Maus', definite: 'die Maus' },
+  { word: 'der Lautsprecher', meaning: 'Speaker', plural: 'die Lautsprecher', indefinite: 'ein Lautsprecher', definite: 'der Lautsprecher' },
+  { word: 'das Mikrofon', meaning: 'Microphone', plural: 'die Mikrofone', indefinite: 'ein Mikrofon', definite: 'das Mikrofon' },
+  { word: 'die Kamera', meaning: 'Camera', plural: 'die Kameras', indefinite: 'eine Kamera', definite: 'die Kamera' },
+  { word: 'der Drucker', meaning: 'Printer', plural: 'die Drucker', indefinite: 'ein Drucker', definite: 'der Drucker' },
+  { word: 'das Faxgerät', meaning: 'Fax Machine', plural: 'die Faxgeräte', indefinite: 'ein Faxgerät', definite: 'das Faxgerät' },
+  { word: 'die Tastatur', meaning: 'Keyboard', plural: 'die Tastaturen', indefinite: 'eine Tastatur', definite: 'die Tastatur' },
+  { word: 'der Speicher', meaning: 'Memory', plural: 'die Speicher', indefinite: 'ein Speicher', definite: 'der Speicher' },
+  { word: 'das Ladegerät', meaning: 'Charger', plural: 'die Ladegeräte', indefinite: 'ein Ladegerät', definite: 'das Ladegerät' },
+  { word: 'die Software', meaning: 'Software', plural: 'die Software', indefinite: 'Software', definite: 'die Software' },
+  { word: 'der USB-Stick', meaning: 'USB Stick', plural: 'die USB-Sticks', indefinite: 'ein USB-Stick', definite: 'der USB-Stick' },
+  { word: 'das USB-Kabel', meaning: 'USB Cable', plural: 'die USB-Kabel', indefinite: 'ein USB-Kabel', definite: 'das USB-Kabel' },
+  { word: 'die Festplatte', meaning: 'Hard Drive', plural: 'die Festplatten', indefinite: 'eine Festplatte', definite: 'die Festplatte' },
+  { word: 'der Laptop', meaning: 'Laptop', plural: 'die Laptops', indefinite: 'ein Laptop', definite: 'der Laptop' },
+  { word: 'das Tablet', meaning: 'Tablet', plural: 'die Tablets', indefinite: 'ein Tablet', definite: 'das Tablet' },
+  { word: 'die Mausmatte', meaning: 'Mousepad', plural: 'die Mausmatten', indefinite: 'eine Mausmatte', definite: 'die Mausmatte' },
+  { word: 'der Stecker', meaning: 'Plug', plural: 'die Stecker', indefinite: 'ein Stecker', definite: 'der Stecker' },
+  { word: 'das Kabel', meaning: 'Cable', plural: 'die Kabel', indefinite: 'ein Kabel', definite: 'das Kabel' },
+  { word: 'die Straße', meaning: 'Street', plural: 'die Straßen', indefinite: 'eine Straße', definite: 'die Straße' },
+  { word: 'der Park', meaning: 'Park', plural: 'die Parks', indefinite: 'ein Park', definite: 'der Park' },
+  { word: 'das Gebäude', meaning: 'Building', plural: 'die Gebäude', indefinite: 'ein Gebäude', definite: 'das Gebäude' },
+  { word: 'die Stadt', meaning: 'City', plural: 'die Städte', indefinite: 'eine Stadt', definite: 'die Stadt' },
+  { word: 'der Platz', meaning: 'Square', plural: 'die Plätze', indefinite: 'ein Platz', definite: 'der Platz' },
+  { word: 'das Dorf', meaning: 'Village', plural: 'die Dörfer', indefinite: 'ein Dorf', definite: 'das Dorf' },
+  { word: 'die Brücke', meaning: 'Bridge', plural: 'die Brücken', indefinite: 'eine Brücke', definite: 'die Brücke' },
+  { word: 'der Fluss', meaning: 'River', plural: 'die Flüsse', indefinite: 'ein Fluss', definite: 'der Fluss' },
+  { word: 'das Meer', meaning: 'Sea', plural: 'die Meere', indefinite: 'ein Meer', definite: 'das Meer' },
+  { word: 'die Insel', meaning: 'Island', plural: 'die Inseln', indefinite: 'eine Insel', definite: 'die Insel' },
+  { word: 'der Wald', meaning: 'Forest', plural: 'die Wälder', indefinite: 'ein Wald', definite: 'der Wald' },
+  { word: 'das Land', meaning: 'Country', plural: 'die Länder', indefinite: 'ein Land', definite: 'das Land' },
+  { word: 'die Wüste', meaning: 'Desert', plural: 'die Wüsten', indefinite: 'eine Wüste', definite: 'die Wüste' },
+  { word: 'der Berg', meaning: 'Mountain', plural: 'die Berge', indefinite: 'ein Berg', definite: 'der Berg' },
+  { word: 'das Tal', meaning: 'Valley', plural: 'die Täler', indefinite: 'ein Tal', definite: 'das Tal' },
+  { word: 'die Küste', meaning: 'Coast', plural: 'die Küsten', indefinite: 'eine Küste', definite: 'die Küste' },
+  { word: 'der See', meaning: 'Lake', plural: 'die Seen', indefinite: 'ein See', definite: 'der See' },
+  { word: 'das Ufer', meaning: 'Shore', plural: 'die Ufer', indefinite: 'ein Ufer', definite: 'das Ufer' },
+  { word: 'die Straße', meaning: 'Road', plural: 'die Straßen', indefinite: 'eine Straße', definite: 'die Straße' },
+  { word: 'der Weg', meaning: 'Path', plural: 'die Wege', indefinite: 'ein Weg', definite: 'der Weg' },
+  { word: 'das Auto', meaning: 'Car', plural: 'die Autos', indefinite: 'ein Auto', definite: 'das Auto' },
+  { word: 'die Bahn', meaning: 'Train', plural: 'die Bahnen', indefinite: 'eine Bahn', definite: 'die Bahn' },
+  { word: 'der Bus', meaning: 'Bus', plural: 'die Busse', indefinite: 'ein Bus', definite: 'der Bus' },
+  { word: 'das Flugzeug', meaning: 'Airplane', plural: 'die Flugzeuge', indefinite: 'ein Flugzeug', definite: 'das Flugzeug' },
+  { word: 'der Schiff', meaning: 'Ship', plural: 'die Schiffe', indefinite: 'ein Schiff', definite: 'der Schiff' },
+  { word: 'die Fahrräder', meaning: 'Bicycles', plural: 'die Fahrräder', indefinite: 'Fahrräder', definite: 'die Fahrräder' },
+  { word: 'der Flughafen', meaning: 'Airport', plural: 'die Flughäfen', indefinite: 'ein Flughafen', definite: 'der Flughafen' },
+  { word: 'das Ticket', meaning: 'Ticket', plural: 'die Tickets', indefinite: 'ein Ticket', definite: 'das Ticket' },
+  { word: 'die Karte', meaning: 'Map', plural: 'die Karten', indefinite: 'eine Karte', definite: 'die Karte' },
+  { word: 'der Plan', meaning: 'Plan', plural: 'die Pläne', indefinite: 'ein Plan', definite: 'der Plan' },
+  { word: 'die Richtung', meaning: 'Direction', plural: 'die Richtungen', indefinite: 'eine Richtung', definite: 'die Richtung' },
+  { word: 'der Süden', meaning: 'South', plural: 'die Süden', indefinite: 'Süden', definite: 'der Süden' },
+  { word: 'das Norden', meaning: 'North', plural: 'die Norden', indefinite: 'Norden', definite: 'das Norden' },
+  { word: 'der Westen', meaning: 'West', plural: 'die Westen', indefinite: 'Westen', definite: 'der Westen' },
+  { word: 'das Osten', meaning: 'East', plural: 'die Osten', indefinite: 'Osten', definite: 'das Osten' },
+  { word: 'die Geschwindigkeit', meaning: 'Speed', plural: 'die Geschwindigkeiten', indefinite: 'eine Geschwindigkeit', definite: 'die Geschwindigkeit' },
+  { word: 'der Stau', meaning: 'Traffic Jam', plural: 'die Staus', indefinite: 'ein Stau', definite: 'der Stau' },
+  { word: 'die Brücke', meaning: 'Bridge', plural: 'die Brücken', indefinite: 'eine Brücke', definite: 'die Brücke' },
+  { word: 'der Tunnel', meaning: 'Tunnel', plural: 'die Tunnel', indefinite: 'ein Tunnel', definite: 'der Tunnel' },
+  { word: 'das Verkehrsschild', meaning: 'Traffic Sign', plural: 'die Verkehrsschilder', indefinite: 'ein Verkehrsschild', definite: 'das Verkehrsschild' },
+  { word: 'die Straße', meaning: 'Street', plural: 'die Straßen', indefinite: 'eine Straße', definite: 'die Straße' },
+  { word: 'der Verkehr', meaning: 'Traffic', plural: 'die Verkehre', indefinite: 'Verkehr', definite: 'der Verkehr' },
+  { word: 'das Parken', meaning: 'Parking', plural: 'die Parken', indefinite: 'Parken', definite: 'das Parken' },
+  { word: 'der Parkplatz', meaning: 'Parking Lot', plural: 'die Parkplätze', indefinite: 'ein Parkplatz', definite: 'der Parkplatz' },
+  { word: 'das Taxi', meaning: 'Taxi', plural: 'die Taxis', indefinite: 'ein Taxi', definite: 'das Taxi' },
+  { word: 'die Linie', meaning: 'Line', plural: 'die Linien', indefinite: 'eine Linie', definite: 'die Linie' },
+  { word: 'der Wegweiser', meaning: 'Signpost', plural: 'die Wegweiser', indefinite: 'ein Wegweiser', definite: 'der Wegweiser' },
+  { word: 'die Kreuzung', meaning: 'Intersection', plural: 'die Kreuzungen', indefinite: 'eine Kreuzung', definite: 'die Kreuzung' },
+  { word: 'der Bürgersteig', meaning: 'Sidewalk', plural: 'die Bürgersteige', indefinite: 'ein Bürgersteig', definite: 'der Bürgersteig' },
+  { word: 'das Autohaus', meaning: 'Car Dealership', plural: 'die Autohäuser', indefinite: 'ein Autohaus', definite: 'das Autohaus' },
+  { word: 'die Werkstatt', meaning: 'Workshop', plural: 'die Werkstätten', indefinite: 'eine Werkstatt', definite: 'die Werkstatt' },
+  { word: 'der Motor', meaning: 'Engine', plural: 'die Motoren', indefinite: 'ein Motor', definite: 'der Motor' },
+  { word: 'das Getriebe', meaning: 'Transmission', plural: 'die Getriebe', indefinite: 'ein Getriebe', definite: 'das Getriebe' },
+  { word: 'der Reifen', meaning: 'Tire', plural: 'die Reifen', indefinite: 'ein Reifen', definite: 'der Reifen' },
+  { word: 'das Autozubehör', meaning: 'Car Accessories', plural: 'die Autozubehör', indefinite: 'Autozubehör', definite: 'das Autozubehör' },
+  { word: 'die Karosserie', meaning: 'Car Body', plural: 'die Karosserien', indefinite: 'eine Karosserie', definite: 'die Karosserie' }
+]; 
 
 // Shuffle array
 const shuffleArray = (array) => {
-  for (let i = array.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [array[i], array[j]] = [array[j], array[i]];
-  }
-};
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+}; 
 
-// Quiz management variables
-let quizInProgress = false;
+// Level selection and quiz function
+let quizInProgress = false; 
 
 // Function to send a quiz message
-const sendQuizMessage = async (channel, question, options) => {
-  const embed = new EmbedBuilder()
-    .setTitle('**German Vocabulary Quiz**')
-    .setDescription(question)
-    .addFields(options.map((opt) => ({ name: opt, value: '\u200B', inline: true })))
-    .setColor('#0099ff')
-    .setFooter({ text: 'React with the emoji corresponding to your answer' });
+const sendQuizMessage = async (channel, user, question, options) => {
+  const embed = new EmbedBuilder()
+    .setTitle('**German Vocabulary Quiz**')
+    .setDescription(question)
+    .addFields(options.map((opt) => ({ name: opt, value: '\u200B', inline: true })))
+    .setColor('#E67E22')
+    .setFooter({ text: 'React with the emoji corresponding to your answer' }); 
 
-  const quizMessage = await channel.send({ embeds: [embed] });
+  const quizMessage = await channel.send({ embeds: [embed] }); 
 
-  for (const option of ['🇦', '🇧', '🇨', '🇩']) {
-    await quizMessage.react(option);
-  }
+  for (const option of ['🇦', '🇧', '🇨', '🇩']) {
+    await quizMessage.react(option);
+  } 
 
-  return quizMessage;
-};
+  return quizMessage;
+}; 
 
-// Event listener when the bot is ready
-client.once('ready', () => {
-  console.log(`Logged in as ${client.user.tag}`);
-});
-
-// Event listener for messages
+// Message event listener
 client.on('messageCreate', async (message) => {
-  if (message.content.toLowerCase() === '!quiz') {
-    if (quizInProgress) {
-      return message.reply('A quiz is already in progress. Please wait until it finishes.');
-    }
+  if (message.content.toLowerCase() === '?quiz') {
+    if (quizInProgress) {
+      return message.reply('A quiz is already in progress. Please wait.');
+    } 
 
-    quizInProgress = true;
+    quizInProgress = true;
+    const levelEmbed = new EmbedBuilder()
+      .setTitle('Choose Your Level')
+      .setDescription('React to select your level:\n\n🇦: A1\n🇧: A2\n🇨: B1\n🇩: B2\n🇪: C1\n🇫: C2')
+      .setColor('#3498DB'); 
 
-    shuffleArray(words); // Shuffle questions
-    const selectedWords = words.slice(0, 5); // Select 5 random words
-    let score = 0;
-    let detailedResults = [];
+    const levelMessage = await message.channel.send({ embeds: [levelEmbed] }); 
 
-    for (let i = 0; i < selectedWords.length; i++) {
-      const currentWord = selectedWords[i];
-      const question = `What is the English meaning of the German word "${currentWord.word}"?`;
+    const levelEmojis = ['🇦', '🇧', '🇨', '🇩', '🇪', '🇫'];
+    const levels = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2']; 
 
-      const quizMessage = await sendQuizMessage(message.channel, question, currentWord.options);
+    for (const emoji of levelEmojis) {
+      await levelMessage.react(emoji);
+    } 
 
-      const filter = (reaction, user) =>
-        ['🇦', '🇧', '🇨', '🇩'].includes(reaction.emoji.name) && !user.bot;
+    const filter = (reaction, user) => levelEmojis.includes(reaction.emoji.name) && user.id === message.author.id; 
 
-      try {
-        const collected = await quizMessage.awaitReactions({ filter, max: 1, time: 15000 });
-        const reaction = collected.first();
+    try {
+      const collected = await levelMessage.awaitReactions({ filter, max: 1, time: 15000 });
+      const reaction = collected.first(); 
 
-        if (reaction) {
-          const userChoiceIndex = ['🇦', '🇧', '🇨', '🇩'].indexOf(reaction.emoji.name);
-          const userAnswer = currentWord.options[userChoiceIndex].split(': ')[1]; // Extract answer
-          const isCorrect = userAnswer === currentWord.meaning;
+      if (!reaction) {
+        quizInProgress = false;
+        await levelMessage.delete();
+        return message.channel.send('No level selected. Quiz cancelled.');
+      } 
 
-          if (isCorrect) {
-            score++;
-          }
+      const selectedLevel = levels[levelEmojis.indexOf(reaction.emoji.name)];
+      await levelMessage.delete(); 
 
-          detailedResults.push({
-            word: currentWord.word,
-            userAnswer: userAnswer,
-            correct: currentWord.meaning,
-            isCorrect: isCorrect
-          });
-        } else {
-          detailedResults.push({
-            word: currentWord.word,
-            userAnswer: 'No reaction',
-            correct: currentWord.meaning,
-            isCorrect: false
-          });
-        }
-      } catch (error) {
-        console.error('Reaction collection failed:', error);
-        detailedResults.push({
-          word: currentWord.word,
-          userAnswer: 'No reaction',
-          correct: currentWord.meaning,
-          isCorrect: false
-        });
-      }
+      const questions = quizData[selectedLevel] || [];
+      shuffleArray(questions); 
 
-      await quizMessage.delete();
-    }
+      // Select only 5 questions from the shuffled array (or as many as available)
+      const questionsToAsk = questions.slice(0, 5); 
 
-    quizInProgress = false;
+      if (questionsToAsk.length === 0) {
+        quizInProgress = false;
+        return message.channel.send('No questions available for this level.');
+      } 
 
-    const resultEmbed = new EmbedBuilder()
-      .setTitle('Quiz Results')
-      .setDescription(`You scored ${score} out of 5!`)
-      .setColor('#00FF00');
+      let score = 0;
+      const detailedResults = []; 
 
-    let resultsDetail = '';
+      for (const question of questionsToAsk) {
+        const quizMessage = await sendQuizMessage(
+          message.channel,
+          message.author,
+          `What is the English meaning of "${question.word}"?`,
+          question.options
+        ); 
 
-    detailedResults.forEach((result) => {
-      resultsDetail += `**German word:** "${result.word}"\n` +
-        `Your answer: ${result.userAnswer}\n` +
-        `Correct answer: ${result.correct}\n` +
-        `Result: ${result.isCorrect ? '✅ Correct' : '❌ Incorrect'}\n\n`;
-    });
+        const quizFilter = (reaction, user) =>
+          ['🇦', '🇧', '🇨', '🇩'].includes(reaction.emoji.name) && user.id === message.author.id; 
 
-    resultEmbed.addFields({ name: 'Detailed Results', value: resultsDetail });
+        try {
+          const quizCollected = await quizMessage.awaitReactions({ filter: quizFilter, max: 1, time: 15000 });
+          const quizReaction = quizCollected.first(); 
 
-    await message.channel.send({ embeds: [resultEmbed] });
-  }
-});
+          if (quizReaction && quizReaction.emoji.name === question.correct) {
+            score++;
+            detailedResults.push({
+              word: question.word,
+              userAnswer: question.options[['🇦', '🇧', '🇨', '🇩'].indexOf(quizReaction.emoji.name)].split(': ')[1],
+              correct: question.meaning,
+              isCorrect: true,
+            });
+          } else {
+            detailedResults.push({
+              word: question.word,
+              userAnswer: quizReaction
+                ? question.options[['🇦', '🇧', '🇨', '🇩'].indexOf(quizReaction.emoji.name)].split(': ')[1]
+                : 'No Answer',
+              correct: question.meaning,
+              isCorrect: false,
+            });
+          }
+        } catch (error) {
+          console.error('Reaction collection failed:', error);
+          detailedResults.push({
+            word: question.word,
+            userAnswer: 'No Answer',
+            correct: question.meaning,
+            isCorrect: false,
+          });
+        } finally {
+          await quizMessage.delete();
+        }
+      } 
 
-// Channel ID for Word of the Day
-const wordOfTheDayChannelId = '1225363050207514675';
+      const resultEmbed = new EmbedBuilder()
+        .setTitle('Quiz Results')
+        .setDescription(`You scored ${score} out of ${questionsToAsk.length}!`)
+        .setColor('#2ECC71')
+        .addFields(
+          {
+            name: 'Detailed Results',
+            value: detailedResults
+              .map(
+                (res) =>
+                  `**Word:** ${res.word}\nYour Answer: ${res.userAnswer}\nCorrect: ${res.correct}\nResult: ${
+                    res.isCorrect ? '✅' : '❌'
+                  }`
+              )
+              .join('\n\n'),
+          }
+        ); 
 
-// Function to send the Word of the Day
+      await message.channel.send({ embeds: [resultEmbed] });
+    } catch (error) {
+      console.error('Error during level selection:', error);
+    } finally {
+      quizInProgress = false;
+    }
+  }
+}); 
+
+// Word of the Day
+const wordOfTheDayChannelId = '1327875414584201350';
 const sendWordOfTheDay = async () => {
-  const channel = await client.channels.fetch(wordOfTheDayChannelId);
-  const randomWord = words[Math.floor(Math.random() * words.length)];
-  const embed = new EmbedBuilder()
-    .setTitle('**Word of the Day**')
-    .setDescription(`Today's German word is **${randomWord.word}**!`)
-    .addFields(
-      { name: 'Meaning', value: randomWord.meaning }
-    )
-    .setColor('#FFA500') // Orange color
-    .setFooter({ text: 'Stay tuned for more words!' });
+  const channel = await client.channels.fetch(wordOfTheDayChannelId);
+  const randomWord = wordList[Math.floor(Math.random() * wordList.length)];
+  const embed = new EmbedBuilder()
+    .setTitle('**Word of the Day**') // Bold title
+    .setDescription(`Today's Word of the Day is...\n\n**${randomWord.word}**`) // Normal sentence, bold word
+    .addFields(
+      { name: '**Meaning**', value: randomWord.meaning, inline: false },
+      { name: '**Plural**', value: randomWord.plural, inline: false },
+      { name: '**Indefinite Article**', value: randomWord.indefinite, inline: false },
+      { name: '**Definite Article**', value: randomWord.definite, inline: false }
+    )
+    .setColor('#E67E22'); 
 
-  await channel.send({ embeds: [embed] });
-};
+  await channel.send({ embeds: [embed] });
+}; 
 
-// Set up cron job to send Word of the Day at 12:00 IST daily
-cron.schedule('30 6 * * *', () => {
-  sendWordOfTheDay();
-}, {
-  scheduled: true,
-  timezone: "Asia/Kolkata"
-});
+cron.schedule(
+  '04 15 * * *',
+  () => {
+    sendWordOfTheDay();
+  },
+  {
+    scheduled: true,
+    timezone: 'Asia/Kolkata',
+  }
+); 
 
-// Log in to Discord with the bot token
+client.once('ready', () => {
+  console.log(`${client.user.tag} is online!`);
+}); 
+
 client.login(TOKEN);
