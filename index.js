@@ -134,7 +134,7 @@ const quizData = {
   { word: 'Woche', meaning: 'Week', options: ['A: Month', 'B: Year', 'C: Week', 'D: Day'], correct: '🇨' },
   { word: 'Zukunft', meaning: 'Future', options: ['A: Past', 'B: Future', 'C: Present', 'D: History'], correct: '🇧' },
   { word: 'Zug', meaning: 'Train', options: ['A: Car', 'B: Plane', 'C: Bus', 'D: Train'], correct: '🇩' },
-  { word: 'Ziel', meaning: 'Goal', options: ['A: Goal', 'B: Target', 'C: End', 'D: Dream'], correct: '🇧' },
+  { word: 'Ziel', meaning: 'Goal', options: ['A: Goal', 'B: Target', 'C: End', 'D: Dream'], correct: '🇦' },
   { word: 'Zeitung', meaning: 'Newspaper', options: ['A: Magazine', 'B: Newspaper', 'C: Book', 'D: Journal'], correct: '🇧' },
   { word: 'Zentrum', meaning: 'Center', options: ['A: Side', 'B: Center', 'C: Top', 'D: Corner'], correct: '🇧' },
   { word: 'Zahnarzt', meaning: 'Dentist', options: ['A: Doctor', 'B: Dentist', 'C: Nurse', 'D: Teacher'], correct: '🇧' },
