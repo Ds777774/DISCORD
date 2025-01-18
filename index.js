@@ -669,7 +669,7 @@ let userLevel = selectedLevel; // Store the user's level
   .setDescription(
     `**Level:** ${userLevel}\nYou scored ${score} out of ${questionsToAsk.length}!`
   )
-  .setColor('#2ECC71')
+  .setColor('E67E22')
   .addFields(
     {
       name: 'Detailed Results',
