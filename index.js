@@ -549,7 +549,7 @@ const sendQuizMessage = async (channel, user, question, options) => {
     .setTitle('**German Vocabulary Quiz**')
     .setDescription(question)
     .addFields(options.map((opt) => ({ name: opt, value: '\u200B', inline: true })))
-    .setColor('#E67E22')
+    .setColor('#f4ed09')
     .setFooter({ text: 'React with the emoji corresponding to your answer' }); 
 
   const quizMessage = await channel.send({ embeds: [embed] }); 
@@ -572,7 +572,7 @@ client.on('messageCreate', async (message) => {
     const levelEmbed = new EmbedBuilder()
       .setTitle('Choose Your Level')
       .setDescription('React to select your level:\n\n🇦: A1\n🇧: A2\n🇨: B1\n🇩: B2\n🇪: C1\n🇫: C2')
-      .setColor('#3498DB'); 
+      .setColor('#f4ed09'); 
 
     const levelMessage = await message.channel.send({ embeds: [levelEmbed] }); 
 
@@ -662,7 +662,7 @@ let userLevel = selectedLevel; // Store the user's level
   .setDescription(
     `**Level:** ${userLevel}\nYou scored ${score} out of ${questionsToAsk.length}!`
   )
-  .setColor('E67E22')
+  .setColor('#f4ed09')
   .addFields(
     {
       name: 'Detailed Results',
