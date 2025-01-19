@@ -588,6 +588,25 @@ const sendQuizMessage = async (channel, user, question, options) => {
 
 // Message event listener
 client.on('messageCreate', async (message) => {
+if (message.content.toLowerCase() === '!quizhelp') {
+  const helpEmbed = new EmbedBuilder()
+    .setTitle('Quiz Rules')
+    .setDescription(
+      'Here are the rules for the German Vocabulary Quiz:\n\n' +
+      '1. Use **!quiz** to begin the quiz.\n' +
+      '2. Select your level by reacting to the options:\n   🇦: A1, 🇧: A2, 🇨: B1, 🇩: B2, 🇪: C1, 🇫: C2.\n' +
+      '3. The bot will ask **5 questions** from the selected level.\n' +
+      '4. Each question has **4 options (A, B, C, D)**.\n' +
+      '5. You have **1 minute** to answer each question.\n' +
+      '6. Your final result will include your score, correct answers, and your level.'
+    )
+    .setColor('#7907FF')
+    .setFooter({ text: 'Type !start to begin the quiz. Good luck!' });
+
+  await message.channel.send({ embeds: [helpEmbed] });
+  return; // Stop further execution for this command
+}
+
   if (message.content.toLowerCase() === '!quiz') {
     if (quizInProgress) {
       return message.reply('A quiz is already in progress. Please wait.');
