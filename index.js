@@ -600,8 +600,8 @@ if (message.content.toLowerCase() === '!quizhelp') {
       '5. You have **1 minute** to answer each question.\n' +
       '6. Your final result will include your score, correct answers, and your level.'
     )
-    .setColor('#7907FF')
-    .setFooter({ text: 'Type !start to begin the quiz. Good luck!' });
+    .setColor('#f4ed09')
+    .setFooter({ text: 'Type !quiz to begin the quiz. Good luck!' });
 
   await message.channel.send({ embeds: [helpEmbed] });
   return; // Stop further execution for this command
