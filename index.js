@@ -687,7 +687,7 @@ let userLevel = selectedLevel; // Store the user's level
 }); 
 
 // Word of the Day
-const wordOfTheDayChannelId = '1225363050207514675';
+const wordOfTheDayChannelId = '1327875414584201350';
 const sendWordOfTheDay = async () => {
   const channel = await client.channels.fetch(wordOfTheDayChannelId);
   const randomWord = wordList[Math.floor(Math.random() * wordList.length)];
