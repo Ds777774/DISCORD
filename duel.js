@@ -1,6 +1,5 @@
 const { EmbedBuilder } = require('discord.js');
-const { startQuiz, shuffleArray, getTeamResults, getUserLevel } = require('./logic');
-const { Pool } = require('pg'); // PostgreSQL client
+const { startQuiz, shuffleArray, getTeamResults } = require('./logic');
 
 const embedColors = {
     russian: '#7907ff',
@@ -11,16 +10,8 @@ const embedColors = {
 
 const activeDuels = {};
 
-// PostgreSQL client setup
-const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: {
-        rejectUnauthorized: false,
-    },
-});
-
 module.exports.handleDuel = async (message) => {
-    const mentionedUsers = Array.from(message.mentions.users.values()); // Fix here
+    const mentionedUsers = message.mentions.users.array();
 
     if (mentionedUsers.length < 2 || mentionedUsers.length > 10) {
         return message.channel.send('Please mention at least 2 and at most 10 users for the duel.');
@@ -81,8 +72,8 @@ module.exports.handleDuel = async (message) => {
         const startMessageSend = await message.channel.send({ embeds: [startMessage] });
         setTimeout(() => startMessageSend.delete(), 5000);
 
-        // Start Duel - Fetch user levels from leaderboard table
-        const duelData = {
+        // Start Duel - Questions for Each Player
+        activeDuels[message.author.id] = {
             blueTeam: blueTeam.map(user => user.id),
             redTeam: redTeam.map(user => user.id),
             language: selectedLanguage,
@@ -91,17 +82,15 @@ module.exports.handleDuel = async (message) => {
             startTeam: startingTeam,
         };
 
-        // Fetch levels for each user from the leaderboard table
+        // Process Each Team's Members
         for (const team of [blueTeam, redTeam]) {
             for (const user of team) {
-                const level = await getUserLevel(user.id);
-                duelData[user.id] = { level }; // Store the level
-                await startQuiz(user, selectedLanguage, level, duelData); // Pass level to startQuiz
+                await startQuiz(user, selectedLanguage, user.id, activeDuels[message.author.id]);
             }
         }
 
         // Calculate Winning Team
-        await getTeamResults(message, duelData);
+        await getTeamResults(message, activeDuels[message.author.id]);
 
         // Reset the duel tracking after the results
         delete activeDuels[message.author.id];
