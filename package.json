@@ -1,20 +1,27 @@
 {
-  "name": "nodejs",
+  "name": "duel-bot",
   "version": "1.0.0",
-  "description": "",
+  "description": "A Discord bot for the duel game",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
+  "keywords": [
+    "discord",
+    "bot",
+    "duel",
+    "game"
+  ],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "discord.js": "^14.17.3",
+    "pg": "^8.8.0",
+    "dotenv": "^16.0.3",
     "@discordjs/rest": "^2.4.2",
     "@types/node": "^18.0.6",
     "discord-api-types": "^0.37.115",
-    "discord.js": "^14.17.3",
     "express": "^4.21.2",
     "node-cron": "^2.0.3"
   }
