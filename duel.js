@@ -1,5 +1,6 @@
 const { EmbedBuilder } = require('discord.js');
-const { startQuiz, shuffleArray, getTeamResults } = require('./logic');
+const { startQuiz, shuffleArray, getTeamResults, getUserLevel } = require('./logic');
+const { Pool } = require('pg'); // PostgreSQL client
 
 const embedColors = {
     russian: '#7907ff',
@@ -9,6 +10,14 @@ const embedColors = {
 };
 
 const activeDuels = {};
+
+// PostgreSQL client setup
+const pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: {
+        rejectUnauthorized: false,
+    },
+});
 
 module.exports.handleDuel = async (message) => {
     const mentionedUsers = message.mentions.users.array();
@@ -72,8 +81,8 @@ module.exports.handleDuel = async (message) => {
         const startMessageSend = await message.channel.send({ embeds: [startMessage] });
         setTimeout(() => startMessageSend.delete(), 5000);
 
-        // Start Duel - Questions for Each Player
-        activeDuels[message.author.id] = {
+        // Start Duel - Fetch user levels from leaderboard table
+        const duelData = {
             blueTeam: blueTeam.map(user => user.id),
             redTeam: redTeam.map(user => user.id),
             language: selectedLanguage,
@@ -82,15 +91,17 @@ module.exports.handleDuel = async (message) => {
             startTeam: startingTeam,
         };
 
-        // Process Each Team's Members
+        // Fetch levels for each user from the leaderboard table
         for (const team of [blueTeam, redTeam]) {
             for (const user of team) {
-                await startQuiz(user, selectedLanguage, user.id, activeDuels[message.author.id]);
+                const level = await getUserLevel(user.id);
+                duelData[user.id] = { level }; // Store the level
+                await startQuiz(user, selectedLanguage, level, duelData); // Pass level to startQuiz
             }
         }
 
         // Calculate Winning Team
-        await getTeamResults(message, activeDuels[message.author.id]);
+        await getTeamResults(message, duelData);
 
         // Reset the duel tracking after the results
         delete activeDuels[message.author.id];
