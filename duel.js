@@ -20,7 +20,7 @@ const pool = new Pool({
 });
 
 module.exports.handleDuel = async (message) => {
-    const mentionedUsers = message.mentions.users.array();
+    const mentionedUsers = Array.from(message.mentions.users.values()); // Fix here
 
     if (mentionedUsers.length < 2 || mentionedUsers.length > 10) {
         return message.channel.send('Please mention at least 2 and at most 10 users for the duel.');
