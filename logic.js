@@ -1,32 +1,9 @@
 const { EmbedBuilder } = require('discord.js');
-const { Pool } = require('pg');
 const { russianQuizData } = require('./russianData');
 const { germanQuizData } = require('./germanData');
 const { frenchQuizData } = require('./frenchData');
 
-// PostgreSQL client setup
-const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: {
-        rejectUnauthorized: false,
-    },
-});
-
-module.exports.getUserLevel = async (userId) => {
-    try {
-        // Query the leaderboard table for the user's highest level
-        const result = await pool.query('SELECT level FROM leaderboard WHERE user_id = $1 ORDER BY score DESC LIMIT 1', [userId]);
-        if (result.rows.length > 0) {
-            return result.rows[0].level; // Return the highest level found
-        }
-        return 'A1'; // Default level if no data found
-    } catch (err) {
-        console.error('Error fetching user level:', err);
-        return 'A1'; // Default level in case of error
-    }
-};
-
-module.exports.startQuiz = async (user, selectedLanguage, userLevel, duelData) => {
+module.exports.startQuiz = async (user, selectedLanguage, userId, duelData) => {
     let quizData;
     if (selectedLanguage === 'german') {
         quizData = germanQuizData;
@@ -38,7 +15,9 @@ module.exports.startQuiz = async (user, selectedLanguage, userLevel, duelData) =
         return;
     }
 
-    const questions = quizData[userLevel] || quizData['A1']; // Ensure level exists in quiz data
+    // You can choose any level manually here (e.g., 'A1', 'B1', 'C2')
+    const level = 'A1'; // Can be adjusted to prompt for level selection like in your quiz logic
+    const questions = quizData[level];
     shuffleArray(questions);
 
     const questionsToAsk = questions.slice(0, 5);
@@ -48,7 +27,7 @@ module.exports.startQuiz = async (user, selectedLanguage, userLevel, duelData) =
 
     const emojis = ['🇦', '🇧', '🇨', '🇩'];
 
-    duelData.detailedResults.push({ userId: user.id, results: [] });
+    duelData.detailedResults.push({ userId: userId, results: [] });
 
     for (const question of questionsToAsk) {
         const correctOption = question.correct;
@@ -73,7 +52,7 @@ module.exports.startQuiz = async (user, selectedLanguage, userLevel, duelData) =
         }
 
         const quizReaction = await quizMessage.awaitReactions({
-            filter: (reaction, user) => emojis.includes(reaction.emoji.name) && user.id === user.id,
+            filter: (reaction, user) => emojis.includes(reaction.emoji.name) && user.id === userId,
             max: 1,
             time: 60000,
         });
@@ -84,7 +63,7 @@ module.exports.startQuiz = async (user, selectedLanguage, userLevel, duelData) =
         const isCorrect = userReaction && userReaction.emoji.name === correctEmoji;
 
         if (isCorrect) {
-            duelData.scores[duelData.blueTeam.includes(user.id) ? 'blue' : 'red']++;
+            duelData.scores[duelData.blueTeam.includes(userId) ? 'blue' : 'red']++;
         }
 
         duelData.detailedResults.push({
