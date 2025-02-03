@@ -1,151 +1,101 @@
-const { MessageEmbed } = require('discord.js');
-const { frenchQuizData } = require('./frenchduel');
-const { germanQuizData } = require('./germanduel');
-const { russianQuizData } = require('./russianduel');
-const { Pool } = require('pg');
+const { EmbedBuilder } = require('discord.js');
+const { startQuiz, shuffleArray, getTeamResults } = require('./logic');
 
-// Set up PostgreSQL connection pool
-const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-});
+const embedColors = {
+    russian: '#7907ff',
+    german: '#f4ed09',
+    french: '#09ebf6',
+    default: '#acf508',
+};
 
-module.exports = {
-    name: 'duel',
-    description: 'Duel game between players',
-    async execute(message, args) {
-        // Command only available to the user who invoked it
-        if (!args.length) {
-            return message.channel.send("Please mention players for the duel!");
+const activeDuels = {};
+
+module.exports.handleDuel = async (message) => {
+    const mentionedUsers = message.mentions.users.array();
+
+    if (mentionedUsers.length < 2 || mentionedUsers.length > 10) {
+        return message.channel.send('Please mention at least 2 and at most 10 users for the duel.');
+    }
+
+    try {
+        // Select Language
+        const languageEmbed = new EmbedBuilder()
+            .setTitle('Choose a Language for the Duel Quiz')
+            .setDescription('React to select the language:\n\n🇩🇪: German\n🇫🇷: French\n🇷🇺: Russian')
+            .setColor(embedColors.default);
+
+        const languageMessage = await message.channel.send({ embeds: [languageEmbed] });
+        const languageEmojis = ['🇩🇪', '🇫🇷', '🇷🇺'];
+        const languages = ['german', 'french', 'russian'];
+
+        for (const emoji of languageEmojis) {
+            await languageMessage.react(emoji);
         }
 
-        const players = args.map(arg => arg.replace(/[<@!>]/g, ''));  // Clean player mentions
-        const totalPlayers = players.length;
+        const languageReaction = await languageMessage.awaitReactions({
+            filter: (reaction, user) => languageEmojis.includes(reaction.emoji.name) && user.id === message.author.id,
+            max: 1,
+            time: 15000,
+        });
 
-        if (totalPlayers < 2) {
-            return message.channel.send("Need at least 2 players for a duel.");
+        if (!languageReaction.size) {
+            await languageMessage.delete();
+            return message.channel.send('No language selected. Duel cancelled.');
         }
 
-        // Fetch leaderboard data for players
-        const playerData = await pool.query('SELECT * FROM leaderboard WHERE discord_id = ANY($1::text[])', [players]);
+        const selectedLanguage = languages[languageEmojis.indexOf(languageReaction.first().emoji.name)];
+        await languageMessage.delete();
 
-        // Form teams based on performance
-        const teamRed = [];
-        const teamBlue = [];
-        const sortedPlayers = playerData.rows.sort((a, b) => b.score - a.score); // Sort by score
+        // Create Teams
+        const blueTeam = mentionedUsers.slice(0, Math.ceil(mentionedUsers.length / 2));
+        const redTeam = mentionedUsers.slice(Math.ceil(mentionedUsers.length / 2));
 
-        for (let i = 0; i < sortedPlayers.length; i++) {
-            if (i % 2 === 0) {
-                teamRed.push(sortedPlayers[i]);
-            } else {
-                teamBlue.push(sortedPlayers[i]);
-            }
-        }
+        // Show Teams
+        const teamEmbed = new EmbedBuilder()
+            .setTitle('Duel Teams')
+            .setDescription(
+                `**Blue Team**\n` + blueTeam.map(user => user.tag).join('\n') +
+                `\n\n**Red Team**\n` + redTeam.map(user => user.tag).join('\n')
+            )
+            .setColor(embedColors.default);
 
-        // Create embed for teams
-        const teamEmbed = new MessageEmbed()
-            .setTitle('Teams for Duel')
-            .addField('Team Red', teamRed.map(p => p.name).join('\n'))
-            .addField('Team Blue', teamBlue.map(p => p.name).join('\n'))
-            .setColor('#FF0000');
-
-        // Show teams for 10 seconds
         const teamMessage = await message.channel.send({ embeds: [teamEmbed] });
         setTimeout(() => teamMessage.delete(), 10000);
 
-        // Randomly choose which team will start
-        const startingTeam = Math.random() > 0.5 ? 'Red' : 'Blue';
+        // Randomly Select Starting Team
+        const startingTeam = Math.random() > 0.5 ? 'blue' : 'red';
+        const startMessage = new EmbedBuilder()
+            .setTitle('Duel Starting!')
+            .setDescription(`${startingTeam.charAt(0).toUpperCase() + startingTeam.slice(1)} Team will start first.`)
+            .setColor(embedColors.default);
 
-        const startEmbed = new MessageEmbed()
-            .setTitle(`${startingTeam} team will start first`)
-            .setColor('#00FF00');
+        const startMessageSend = await message.channel.send({ embeds: [startMessage] });
+        setTimeout(() => startMessageSend.delete(), 5000);
 
-        await message.channel.send({ embeds: [startEmbed] });
-
-        // Ask questions for the starting team
-        const askQuestions = async (team, teamName) => {
-            for (let player of team) {
-                const languageData = getLanguageData(player.language); // Get language data based on player performance
-                const questions = languageData[player.level];
-
-                let correctAnswers = 0;
-                let totalTime = 0;
-
-                for (let q = 0; q < questions.length; q++) {
-                    const question = questions[q];
-                    const questionEmbed = new MessageEmbed()
-                        .setTitle(`Question ${q + 1}`)
-                        .setDescription(`What is the English meaning of "${question.word}"?`)
-                        .setColor('#FFFF00')
-                        .addField('Options', question.options.join('\n'));
-
-                    const questionMessage = await message.channel.send({ embeds: [questionEmbed] });
-
-                    // User must react to answer
-                    await questionMessage.react('🇦');
-                    await questionMessage.react('🇧');
-                    await questionMessage.react('🇨');
-                    await questionMessage.react('🇩');
-
-                    // Wait for the user's reaction (12 seconds per question)
-                    const filter = (reaction, user) => user.id === player.discord_id;
-                    const collected = await questionMessage.awaitReactions({
-                        filter,
-                        max: 1,
-                        time: 12000,
-                    });
-
-                    // Calculate the result
-                    const answer = collected.first();
-                    if (answer.emoji.name === getEmojiFromAnswer(question.correct)) {
-                        correctAnswers++;
-                    }
-
-                    totalTime += 12; // Add 12 seconds for each question
-                }
-
-                // Send result for the player
-                const resultEmbed = new MessageEmbed()
-                    .setTitle(`${player.name} - ${teamName} Team`)
-                    .addField('Correct Answers', `${correctAnswers}/5`)
-                    .addField('Time Taken', `${totalTime}s`)
-                    .setColor('#00FF00');
-                await message.channel.send({ embeds: [resultEmbed] });
-            }
-
-            return correctAnswers;
+        // Start Duel - Questions for Each Player
+        activeDuels[message.author.id] = {
+            blueTeam: blueTeam.map(user => user.id),
+            redTeam: redTeam.map(user => user.id),
+            language: selectedLanguage,
+            scores: { blue: 0, red: 0 },
+            detailedResults: [],
+            startTeam: startingTeam,
         };
 
-        // Set target for the second team based on the first team's score
-        const blueScore = await askQuestions(teamBlue, 'Blue');
-        const redScore = await askQuestions(teamRed, 'Red');
+        // Process Each Team's Members
+        for (const team of [blueTeam, redTeam]) {
+            for (const user of team) {
+                await startQuiz(user, selectedLanguage, user.id, activeDuels[message.author.id]);
+            }
+        }
 
-        const targetEmbed = new MessageEmbed()
-            .setTitle('Target for Red Team')
-            .addField('Team Blue', `${blueScore}/25`)
-            .addField('Red Team needs to score', `${blueScore + 1}`)
-            .setColor('#0000FF');
-        await message.channel.send({ embeds: [targetEmbed] });
+        // Calculate Winning Team
+        await getTeamResults(message, activeDuels[message.author.id]);
 
-        // Determine winner based on score and time
-        // To be implemented
-    },
+        // Reset the duel tracking after the results
+        delete activeDuels[message.author.id];
+    } catch (error) {
+        console.error(error);
+        message.channel.send('An error occurred. Please try again.');
+    }
 };
-
-function getLanguageData(language) {
-    switch (language) {
-        case 'French': return frenchQuizData;
-        case 'German': return germanQuizData;
-        case 'Russian': return russianQuizData;
-        default: return frenchQuizData; // Default to French
-    }
-}
-
-function getEmojiFromAnswer(answer) {
-    switch (answer) {
-        case 'A': return '🇦';
-        case 'B': return '🇧';
-        case 'C': return '🇨';
-        case 'D': return '🇩';
-        default: return '';
-    }
-}
