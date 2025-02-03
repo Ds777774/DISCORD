@@ -1,5 +1,7 @@
 const { EmbedBuilder } = require('discord.js');
-const { germanQuizData, frenchQuizData, russianQuizData } = require('./quizData'); // assuming quiz data is here
+const { russianQuizData, russianWordList } = require('./russianData');
+const { germanQuizData, germanWordList } = require('./germanData');
+const { frenchQuizData, frenchWordList } = require('./frenchData');
 const { shuffleArray } = require('./utilities');
 
 module.exports.startQuiz = async (user, selectedLanguage, userId, duelData) => {
